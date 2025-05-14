@@ -149,7 +149,7 @@ def calculate_trade_price(coins):
             logging.error(str(e))
             
     time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:20])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:100])
 
 # 가격 변동률을 계산하는 함수 (캔들 수가 2개 이상이면 진행)
 def calculate_price_change_percentage(coin):
@@ -179,11 +179,11 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     golden_trade_price_result = calculate_trade_price(golden_cross_coins)
     death_trade_price_result = calculate_trade_price(death_cross_coins)
 
-    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 300}
-    death_trade_price_result = {coin: trade_price for coin, trade_price in death_trade_price_result.items() if trade_price >= 300}
+    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 100}
+    death_trade_price_result = {coin: trade_price for coin, trade_price in death_trade_price_result.items() if trade_price >= 100}
 
     if not golden_trade_price_result and not death_trade_price_result:
-        message = "🔴 현재 300억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
+        message = "🔴 현재 100억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
         send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=False, btc_price_change_percentage=0.0)
         return
 
@@ -197,9 +197,9 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("🟥 1시간 20 > 50 정배열 ")
     message_lines.append("----------------------------------")
    
-    for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:20], start=1):
+    for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:100], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
-        if price_change_percentage is not None and price_change_percentage > -10:
+        if price_change_percentage is not None and price_change_percentage > 0:
             is_new_coin = coin in new_golden_coins
             message_lines.append(f"{idx}.{coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
     
@@ -210,7 +210,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("✅️ 원칙매매 ")
     message_lines.append("----------------------------------")
     
-    for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:15], start=1):
+    for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:100], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
         if price_change_percentage is not None and price_change_percentage > 0:
             is_in_golden_list = coin in golden_trade_price_result
