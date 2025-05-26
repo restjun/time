@@ -206,7 +206,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("")
     message_lines.append("----------------------------------")
     message_lines.append("✅️ 거래대금 24시간")
-    message_lines.append("✅️ 200>50역 ")
+    message_lines.append("✅️ 200>50역 20-50 돌파매수")
     message_lines.append("✅️ 원칙매매 ")
     message_lines.append("----------------------------------")
     
