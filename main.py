@@ -149,7 +149,7 @@ def calculate_trade_price(coins):
             logging.error(str(e))
             
     time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:15])
 
 # 가격 변동률을 계산하는 함수 (캔들 수가 2개 이상이면 진행)
 def calculate_price_change_percentage(coin):
