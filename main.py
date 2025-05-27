@@ -199,7 +199,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
    
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:100], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
-        if price_change_percentage is not None and price_change_percentage > 0:
+        if price_change_percentage is not None and price_change_percentage > -10:
             is_new_coin = coin in new_golden_coins
             message_lines.append(f"{idx}.{coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
     
@@ -212,7 +212,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     
     for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:100], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
-        if price_change_percentage is not None and price_change_percentage > 0:
+        if price_change_percentage is not None and price_change_percentage > -10:
             is_in_golden_list = coin in golden_trade_price_result
             is_new_coin = coin in new_death_coins
             message_lines.append(f"{idx}.{'🟩' if is_new_coin else '🟩'} {'✅️' if is_in_golden_list else ''} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
