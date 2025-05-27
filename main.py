@@ -95,7 +95,7 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 200)
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
             vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 50)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
@@ -215,7 +215,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
         if price_change_percentage is not None and price_change_percentage > -10:
             is_in_golden_list = coin in golden_trade_price_result
             is_new_coin = coin in new_death_coins
-            message_lines.append(f"{idx}.{'🟩' if is_new_coin else '🟩'} {'✅️' if is_in_golden_list else ''} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
+            message_lines.append(f"{idx}.{'🟩' if is_new_coin else '🟩'} {'' if is_in_golden_list else '✅️'} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
             previous_trade_prices[coin] = trade_price
             
     message = "\n".join(message_lines)
