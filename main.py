@@ -149,7 +149,7 @@ def calculate_trade_price(coins):
             logging.error(str(e))
             
     time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:15])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:20])
 
 # 가격 변동률을 계산하는 함수 (캔들 수가 2개 이상이면 진행)
 def calculate_price_change_percentage(coin):
@@ -215,7 +215,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
         if price_change_percentage is not None and price_change_percentage > -10:
             is_in_golden_list = coin in golden_trade_price_result
             is_new_coin = coin in new_death_coins
-            message_lines.append(f"{idx}.{'🟩' if is_new_coin else ''} {'〽' if is_in_golden_list else '〽️'} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
+            message_lines.append(f"{idx}.{'🟩' if is_new_coin else ''} {'' if is_in_golden_list else '〽️'} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
             previous_trade_prices[coin] = trade_price
             
     message = "\n".join(message_lines)
