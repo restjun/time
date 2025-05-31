@@ -210,7 +210,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("✅️ 원칙매매 ")
     message_lines.append("----------------------------------")
     
-    for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:10], start=1):
+    for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:20], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
         if price_change_percentage is not None and price_change_percentage > 0:
             is_in_golden_list = coin in golden_trade_price_result
