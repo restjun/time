@@ -68,7 +68,7 @@ def calculate_vwma(data, volume, period):
 # 비트코인 상태 확인 함수 업데이트
 def check_bitcoin_status():
     btc_ticker = "KRW-BTC"
-    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
+    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
     if btc_df is not None and len(btc_df) >= 200:
         btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 50)
         btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 200)
@@ -95,9 +95,9 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 5)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 20)
-            if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 5)
+            if vwma_1 is not None and vwma_2 is not None and vwma_1 < vwma_2:
                 golden_cross_coins.append(ticker)
 
     return golden_cross_coins
@@ -111,7 +111,7 @@ def find_death_cross_coins(tickers, interval, count):
         if df is not None and len(df) >= 2:
             vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
             vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 200)
-            if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
+            if vwma_1 is not None and vwma_2 is not None and vwma_1 < vwma_2:
                 death_cross_coins.append(ticker)
 
     return death_cross_coins
@@ -194,28 +194,28 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("----------------------------------")
     message_lines.append("🌟 배은산 박현준 박현서 우리 가족 사랑해 🌟")
     message_lines.append("----------------------------------")
-    message_lines.append("🟥 5>20 상태확인")
+    message_lines.append("🟥 5<20 정 ")
     message_lines.append("----------------------------------")
    
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:100], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
-        if price_change_percentage is not None and price_change_percentage > 0:
+        if price_change_percentage is not None and price_change_percentage > -100:
             is_new_coin = coin in new_golden_coins
             message_lines.append(f"{idx}.{coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
     
     message_lines.append("")
     message_lines.append("----------------------------------")
     message_lines.append("✅️ 거래대금 24시간")
-    message_lines.append("✅️ 50 > 200 눌림돌파")
+    message_lines.append("✅️ 50<200 역 돌파매수")
     message_lines.append("✅️ 원칙매매 ")
     message_lines.append("----------------------------------")
     
     for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:100], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
-        if price_change_percentage is not None and price_change_percentage > 0:
+        if price_change_percentage is not None and price_change_percentage > -100:
             is_in_golden_list = coin in golden_trade_price_result
             is_new_coin = coin in new_death_coins
-            message_lines.append(f"{idx}.{'🟩' if is_new_coin else ''} {'✅️' if is_in_golden_list else ''} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
+            message_lines.append(f"{idx}.{'🟩' if is_new_coin else '🟩'} {'✅️' if is_in_golden_list else ''} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
             previous_trade_prices[coin] = trade_price
             
     message = "\n".join(message_lines)
@@ -226,8 +226,8 @@ def fetch_and_send_cross_coins():
     global krw_tickers, previous_sent_coins, previous_trade_prices
     btc_status_1h, btc_status_4h = check_bitcoin_status()
     if btc_status_1h is not None and btc_status_4h is not None:
-        golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute15", count=200)
-        death_cross_coins = find_death_cross_coins(krw_tickers, interval="minute15", count=200)
+        golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute60", count=200)
+        death_cross_coins = find_death_cross_coins(krw_tickers, interval="minute60", count=200)
 
         if not golden_cross_coins and not death_cross_coins:
             message = "🔴 현재 정배열 돌파/눌림 코인이 없습니다.\n\n업비트 확인 완료."
@@ -271,7 +271,6 @@ threading.Thread(target=run_scheduled_task).start()
 if __name__ == "__main__":
     start_message = "애플리케이션이 시작되었습니다."
     send_telegram_message(start_message, btc_status_1h=1, btc_status_4h=1)
-
 
 
 
