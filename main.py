@@ -194,7 +194,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("----------------------------------")
     message_lines.append("🌟 배은산 박현준 박현서 우리 가족 사랑해 🌟")
     message_lines.append("----------------------------------")
-    message_lines.append("🟥 50 < 50  ")
+    message_lines.append("🟥 50 < 20  ")
     message_lines.append("----------------------------------")
    
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:10], start=1):
@@ -204,7 +204,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
             message_lines.append(f"{idx}.{coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
     
     message_lines.append("----------------------------------")
-    message_lines.append("🟥 50 < 200  ")
+    message_lines.append("🟥 50 < 200 역배열 눌림돌파 ")
     message_lines.append("----------------------------------")
     
     for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:10], start=1):
