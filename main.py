@@ -42,7 +42,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n\n(BTC){'  🟩🟩🟩🟩🟩 (차트집중하자)' if btc_status_1h else '  🟥🟥🟥🟥🟥 (차트공부하자)'}\n(⏰️♻️){'감정은버리고 게임이라고 생각하자.' if btc_status_4h else '감정은 버리고 게임이라고 생각하자..'}"
+            message_with_status = f"{message}\n\n(BTC){'  🟩🟩🟩🟩🟩 (추세상승)' if btc_status_1h else '  🟥🟥🟥🟥🟥 (추세하락)'}\n(⏰️♻️){'감정은버리고 게임이라고 생각하자.' if btc_status_4h else '감정은 버리고 게임이라고 생각하자..'}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
@@ -95,8 +95,8 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 20)
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 50)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 < vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -149,7 +149,7 @@ def calculate_trade_price(coins):
             logging.error(str(e))
             
     time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:100])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
 
 # 가격 변동률을 계산하는 함수 (캔들 수가 2개 이상이면 진행)
 def calculate_price_change_percentage(coin):
@@ -194,28 +194,25 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("----------------------------------")
     message_lines.append("🌟 배은산 박현준 박현서 우리 가족 사랑해 🌟")
     message_lines.append("----------------------------------")
-    message_lines.append("🟥 20_50 정 ")
+    message_lines.append("🟥 50 < 50  ")
     message_lines.append("----------------------------------")
    
-    for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:100], start=1):
+    for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:10], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
         if price_change_percentage is not None and price_change_percentage > 0:
             is_new_coin = coin in new_golden_coins
             message_lines.append(f"{idx}.{coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
     
-    message_lines.append("")
     message_lines.append("----------------------------------")
-    message_lines.append("✅️ 거래대금 24시간")
-    message_lines.append("✅️ 50<200 역 ")
-    message_lines.append("✅️ 원칙매매 ")
+    message_lines.append("✅️ 50 < 200  ")
     message_lines.append("----------------------------------")
     
-    for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:100], start=1):
+    for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:10], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
         if price_change_percentage is not None and price_change_percentage > 0:
             is_in_golden_list = coin in golden_trade_price_result
             is_new_coin = coin in new_death_coins
-            message_lines.append(f"{idx}.{'🟩' if is_new_coin else '🟩'} {'✅️3️⃣' if is_in_golden_list else ''} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
+            message_lines.append(f"{idx}.{'🟩' if is_new_coin else '🟩'} {'' if is_in_golden_list else '✅️3️⃣'} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
             previous_trade_prices[coin] = trade_price
             
     message = "\n".join(message_lines)
