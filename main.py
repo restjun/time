@@ -118,7 +118,7 @@ def find_death_cross_coins(tickers, interval, count):
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
 def calculate_trade_price(coins):
-    url = "https://api.upbit.com/v1/candles/minutes/10"
+    url = "https://api.upbit.com/v1/candles/minutes/30"
     total_trade_price = dict()
 
     # 한국 시간대 설정
