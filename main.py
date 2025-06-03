@@ -97,7 +97,7 @@ def find_golden_cross_coins(tickers, interval, count):
         if df is not None and len(df) >= 2:
             vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
             vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 50)
-            if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
+            if vwma_1 is not None and vwma_2 is not None and vwma_1 < vwma_2:
                 golden_cross_coins.append(ticker)
 
     return golden_cross_coins
@@ -111,7 +111,7 @@ def find_death_cross_coins(tickers, interval, count):
         if df is not None and len(df) >= 2:
             vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
             vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 200)
-            if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
+            if vwma_1 is not None and vwma_2 is not None and vwma_1 < vwma_2:
                 death_cross_coins.append(ticker)
 
     return death_cross_coins
@@ -194,22 +194,22 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("----------------------------------")
     message_lines.append("🌟 배은산 박현준 박현서 우리 가족 사랑해 🌟")
     message_lines.append("----------------------------------")
-    message_lines.append("🟥 20 > 50 정배열 중추세 상승 ")
+    message_lines.append("🟥 20 < 50 역배열 중추세 하락 ")
     message_lines.append("----------------------------------")
    
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:15], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
-        if price_change_percentage is not None and price_change_percentage > 0:
+        if price_change_percentage is not None and price_change_percentage > -10:
             is_new_coin = coin in new_golden_coins
             message_lines.append(f"{idx}.{coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
     
     message_lines.append("----------------------------------")
-    message_lines.append("🟥 50 > 200 일봉 정배열 대추세 상승  ")
+    message_lines.append("🟥 50 < 200 한시간 역배열 대추세 하락  ")
     message_lines.append("----------------------------------")
     
     for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:10], start=1):
         price_change_percentage = calculate_price_change_percentage(coin)
-        if price_change_percentage is not None and price_change_percentage > 0:
+        if price_change_percentage is not None and price_change_percentage > -10:
             is_in_golden_list = coin in golden_trade_price_result
             is_new_coin = coin in new_death_coins
             message_lines.append(f"{idx}.{'🟥' if is_new_coin else ''} {'🅾️' if is_in_golden_list else '〽️'} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
