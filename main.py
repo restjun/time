@@ -68,7 +68,7 @@ def calculate_vwma(data, volume, period):
 # 비트코인 상태 확인 함수 업데이트
 def check_bitcoin_status():
     btc_ticker = "KRW-BTC"
-    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute1440", count=200)
+    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
     if btc_df is not None and len(btc_df) >= 200:
         btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 50)
         btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 200)
@@ -223,8 +223,8 @@ def fetch_and_send_cross_coins():
     global krw_tickers, previous_sent_coins, previous_trade_prices
     btc_status_1h, btc_status_4h = check_bitcoin_status()
     if btc_status_1h is not None and btc_status_4h is not None:
-        golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute1440", count=200)
-        death_cross_coins = find_death_cross_coins(krw_tickers, interval="minute1440", count=200)
+        golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute60", count=200)
+        death_cross_coins = find_death_cross_coins(krw_tickers, interval="minute60", count=200)
 
         if not golden_cross_coins and not death_cross_coins:
             message = "🔴 현재 정배열 돌파/눌림 코인이 없습니다.\n\n업비트 확인 완료."
