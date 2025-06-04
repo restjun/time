@@ -70,8 +70,8 @@ def check_bitcoin_status():
     btc_ticker = "KRW-BTC"
     btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
     if btc_df is not None and len(btc_df) >= 200:
-        btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 50)
-        btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 200)
+        btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 20)
+        btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 50)
         btc_status_1h = 1 if btc_vwma_1 is not None and btc_vwma_2 is not None and btc_vwma_1 > btc_vwma_2 else 0
 
         btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute240", count=200)
