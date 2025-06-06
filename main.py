@@ -218,7 +218,7 @@ def retry_request(func, *args, **kwargs):
 # 메인 함수
 def main():
     btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute5", count=200)
+    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute60", count=200)
     send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 스케줄러 설정
