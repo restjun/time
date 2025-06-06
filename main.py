@@ -42,7 +42,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n\n(BTC){'  🟩🟩🟩🟩🟩 (추세상승)' if btc_status_1h else '  🟥🟥🟥🟥🟥 (추세하락)'}\n(⏰️♻️){'감정은버리고 게임이라고 생각하자.' if btc_status_4h else '감정은 버리고 게임이라고 생각하자..'}"
+            message_with_status = f"{message}\n\n(BTC){'  🟩🟩🟩🟩🟩 (추세상승)' if btc_status_1h else '  🟥🟥🟥🟥🟥 (추세하락)'}\n(⏰️1시간){'.' if btc_status_4h else ''}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
@@ -194,7 +194,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
     message_lines.append("----------------------------------")
     message_lines.append("🌟 배은산 박현준 박현서 우리 가족 사랑해 🌟")
     message_lines.append("----------------------------------")
-    message_lines.append("🟩 5 > 20 정배열 소추세 상승 ")
+    message_lines.append("🟩 5-20 정배열 소추세 상승 ")
     message_lines.append("----------------------------------")
    
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:10], start=1):
@@ -204,7 +204,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
             message_lines.append(f"{idx}.{coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
     
     message_lines.append("----------------------------------")
-    message_lines.append("🟩 50 > 200 한시간 정배열 중추세 상승 ")
+    message_lines.append("🟩 50-200 한시간 정배열 대추세 상승 ")
     message_lines.append("----------------------------------")
     
     for idx, (coin, trade_price) in enumerate(sorted(death_trade_price_result.items(), key=lambda x: x[1], reverse=True)[:10], start=1):
@@ -212,7 +212,7 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
         if price_change_percentage is not None and price_change_percentage > -10:
             is_in_golden_list = coin in golden_trade_price_result
             is_new_coin = coin in new_death_coins
-            message_lines.append(f"{idx}.{'🟩' if is_new_coin else ''} {'✅️' if is_in_golden_list else ''} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
+            message_lines.append(f"{idx}.{'★' if is_new_coin else ''} {'🟩' if is_in_golden_list else '🔴'} {coin.replace('KRW-', '')}: {trade_price}억 ({price_change_percentage:+.2f}%) {'🚀' if is_new_coin else ''}")
             previous_trade_prices[coin] = trade_price
             
     message = "\n".join(message_lines)
