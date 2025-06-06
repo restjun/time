@@ -42,7 +42,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n\n(BTC-일봉-1>2){' 🟩 (추세상승)' if btc_status_1h else ' 🟥 (추세하락)'}\n(BTC-15분-50>200){' 🟩 (추세상승)' if btc_status_4h else ' 🟥 (추세하락)'}"
+            message_with_status = f"{message}\n\n(BTC-일봉-1>2){' 🟩 (추세상승)' if btc_status_1h else ' 🟥 (추세하락)'}\n(BTC-60분-50>200){' 🟩 (추세상승)' if btc_status_4h else ' 🟥 (추세하락)'}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
@@ -74,7 +74,7 @@ def check_bitcoin_status():
         btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 2)
         btc_status_1h = 1 if btc_vwma_1 is not None and btc_vwma_2 is not None and btc_vwma_1 > btc_vwma_2 else 0
 
-        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
+        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
             btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
             btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 200)
@@ -186,7 +186,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         price_change_str = f"{price_change:+.2f}%" if price_change is not None else "N/A"
 
         # VWMA 상태 계산
-        df = retry_request(pyupbit.get_ohlcv, coin, interval="minute15", count=200)
+        df = retry_request(pyupbit.get_ohlcv, coin, interval="minute60", count=200)
         vwma_5 = calculate_vwma(df['close'].values, df['volume'].values, 5) if df is not None else None
         vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20) if df is not None else None
         vwma_50 = calculate_vwma(df['close'].values, df['volume'].values, 50) if df is not None else None
