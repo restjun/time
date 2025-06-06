@@ -192,8 +192,6 @@ def send_golden_death_cross_message(golden_cross_coins, death_cross_coins, btc_s
 
     message_lines = [""]
     message_lines.append("----------------------------------")
-    message_lines.append("🌟 배은산 박현준 박현서 우리 가족 사랑해 🌟")
-    message_lines.append("----------------------------------")
     message_lines.append("🟩 5-20 정배열 소추세 상승 ")
     message_lines.append("----------------------------------")
    
