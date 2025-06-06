@@ -198,7 +198,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
-            f"{idx}. {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})\n   1️⃣ 5>20{five_twenty} 2️⃣ 20>50{twenty_fifty} 3️⃣ 50>200{fifty_two_hundred}"
+            f"{idx}. {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})\n   1️⃣ 5>20{five_twenty}, 2️⃣ 20>50{twenty_fifty}, 3️⃣ 50>200{fifty_two_hundred}"
         )
 
     message_lines.append("----------------------------------")
