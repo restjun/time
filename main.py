@@ -175,15 +175,22 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
     message_lines.append("🟩 5-20 / 20-50 / 50-200 정배열 (VWMA)")
     message_lines.append("----------------------------------")
 
-    # 새 코인 탐지용 빈 리스트
-    new_golden_coins = []  # 필요하면 정의하거나 빈 리스트 유지
-
-    vwma_states = {}  # 필요하면 VWMA 상태 딕셔너리 정의
-
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
         price_change = calculate_price_change_percentage(coin)
-        price_change_str = f"{price_change:.2f}%" if price_change is not None else "N/A"
-        message_lines.append(f"{idx}. {coin} - 거래대금: {trade_price}억 원 - 가격변동률: {price_change_str}")
+        price_change_str = f"{price_change:+.2f}%" if price_change is not None else "N/A"
+
+        # VWMA 상태 계산
+        df = retry_request(pyupbit.get_ohlcv, coin, interval="minute5", count=200)
+        vwma_5 = calculate_vwma(df['close'].values, df['volume'].values, 5) if df is not None else None
+        vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20) if df is not None else None
+        vwma_50 = calculate_vwma(df['close'].values, df['volume'].values, 50) if df is not None else None
+        vwma_200 = calculate_vwma(df['close'].values, df['volume'].values, 200) if df is not None else None
+
+        five_twenty = "✅" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else "❌"
+        twenty_fifty = "✅" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "❌"
+        fifty_two_hundred = "✅" if vwma_50 is not None and vwma_200 is not None and vwma_50 > vwma_200 else "❌"
+
+        message_lines.append(f"🟩 {coin}: {trade_price}억 ({price_change_str})  [VWMA] 5>{20}{five_twenty} 20>{50}{twenty_fifty} 50>{200}{fifty_two_hundred}")
 
     message_lines.append("----------------------------------")
 
