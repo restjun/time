@@ -178,7 +178,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     message_lines = []
     message_lines.append("----------------------------------")
-    message_lines.append("🟥 일봉 양봉 / 60분 (VWMA) / 300억이상")
+    message_lines.append("🟥 일봉 음봉 / 60분 (VWMA) / 300억이상")
     message_lines.append("▶️ 매수1️⃣ / ❌️➖️🟥➖️❌️ / 3파 ")
     message_lines.append("▶️ 매수2️⃣ / ❌️➖️🟥➖️🟥 / 5파 ")
     message_lines.append("▶️ 매수3️⃣ / ❌️➖️❌️➖️🟥 / 공통구간 ") 
