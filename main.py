@@ -178,7 +178,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     message_lines = []
     message_lines.append("----------------------------------")
-    message_lines.append("🟩 일봉 양봉 / 60분 (VWMA) 이동평균선 / 거래대금 300억이상")
+    message_lines.append("🟩 일봉 양봉 / 60분 (VWMA) 이평선 / 300억이상")
     message_lines.append("----------------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
