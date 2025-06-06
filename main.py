@@ -179,9 +179,9 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
     message_lines = []
     message_lines.append("----------------------------------")
     message_lines.append("🟥 일봉 음봉 / 60분 (VWMA) / 300억이상")
-    message_lines.append("▶️ 매수1️⃣ / ❌️➖️🟥➖️❌️ / 3파 ")
-    message_lines.append("▶️ 매수2️⃣ / ❌️➖️🟥➖️🟥 / 5파 ")
-    message_lines.append("▶️ 매수3️⃣ / ❌️➖️❌️➖️🟥 / 공통구간 ") 
+    message_lines.append("▶️ 매수1️⃣ / 🟩➖️🟥➖️🟩 / 3파 ")
+    message_lines.append("▶️ 매수2️⃣ / 🟩➖️🟥➖️🟥 / 5파 ")
+    message_lines.append("▶️ 매수3️⃣ / 🟩➖️🟩➖️🟥 / 공통구간 ") 
     message_lines.append("----------------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
@@ -195,13 +195,13 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         vwma_50 = calculate_vwma(df['close'].values, df['volume'].values, 50) if df is not None else None
         vwma_200 = calculate_vwma(df['close'].values, df['volume'].values, 200) if df is not None else None
 
-        five_twenty = "🟥" if vwma_5 is not None and vwma_20 is not None and vwma_5 < vwma_20 else "❌"
-        twenty_fifty = "🟥" if vwma_20 is not None and vwma_50 is not None and vwma_20 < vwma_50 else "❌"
-        fifty_two_hundred = "🟥" if vwma_50 is not None and vwma_200 is not None and vwma_50 < vwma_200 else "❌"
+        five_twenty = "🟥" if vwma_5 is not None and vwma_20 is not None and vwma_5 < vwma_20 else "🟩"
+        twenty_fifty = "🟥" if vwma_20 is not None and vwma_50 is not None and vwma_20 < vwma_50 else "🟩"
+        fifty_two_hundred = "🟥" if vwma_50 is not None and vwma_200 is not None and vwma_50 < vwma_200 else "🟩"
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
-            f"{idx}. {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})\n   1️⃣ 5<20{five_twenty}, 2️⃣ 20<50{twenty_fifty}, 3️⃣ 50<200{fifty_two_hundred}"
+            f"{idx}. {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})\n   1️⃣{five_twenty}➖️2️⃣{twenty_fifty}➖️3️⃣50{fifty_two_hundred}"
         )
 
     message_lines.append("----------------------------------")
