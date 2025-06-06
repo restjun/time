@@ -42,7 +42,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n\n(BTC-1시간){'  🟩🟩🟩🟩🟩 (추세상승)' if btc_status_1h else '  🟥🟥🟥🟥🟥 (추세하락)'}\n(BTC-일봉){'🟩🟩🟩🟩🟩 (추세상승)' if btc_status_4h else '🟥🟥🟥🟥🟥 (추세하락)'}"
+            message_with_status = f"{message}\n\n(BTC-시간){'  🟩🟩🟩🟩🟩 (추세상승)' if btc_status_1h else '  🟥🟥🟥🟥🟥 (추세하락)'}\n(BTC-일봉){' 🟩🟩🟩🟩🟩 (추세상승)' if btc_status_4h else '🟥🟥🟥🟥🟥 (추세하락)'}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
@@ -95,12 +95,18 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 5)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 20)
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 200)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
     return golden_cross_coins
+
+# 메인 함수
+def main():
+    btc_status_1h, btc_status_4h = check_bitcoin_status()
+    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute1440", count=200)
+    send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
 def calculate_trade_price(coins):
@@ -214,12 +220,6 @@ def retry_request(func, *args, **kwargs):
             logging.error(f"API 호출 실패, 재시도 {attempt+1}/{max_retries}: {str(e)}")
             time.sleep(retry_delay)
     return None
-
-# 메인 함수
-def main():
-    btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute60", count=200)
-    send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 스케줄러 설정
 schedule.every(1).minutes.do(main)
