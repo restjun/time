@@ -96,8 +96,8 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 50)
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 1)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 2)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -106,7 +106,7 @@ def find_golden_cross_coins(tickers, interval, count):
 # 메인 함수
 def main():
     btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute15", count=200)
+    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute1440", count=200)
     send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
@@ -179,7 +179,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     message_lines = []
     message_lines.append("----------------------------------")
-    message_lines.append("[15분] 20-50 정배열 / 🅾️ ↗️ 🟩 돌파매수")
+    message_lines.append("[🟩] 일봉 / 🅾️ ↗️ 🟩 돌파매수")
     message_lines.append("----------------------------------")
     message_lines.append("(원칙) 1️⃣:🅾️➖️✅️➖️🅾️  ▶️  🟩➖️🟩➖️🟥 ")
     message_lines.append("----------------------------------")
