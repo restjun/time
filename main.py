@@ -181,8 +181,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
     message_lines.append("----------------------------------")
     message_lines.append("[15분] 50-200 역배열 / 🅾️ ↗️ 🟩 돌파매수")
     message_lines.append("----------------------------------")
-    message_lines.append("(원칙) 1️⃣:🅾️➖️🟩➖️🟥  ▶️  🟩➖️🟩➖️🟥 ")
-    message_lines.append("(원칙) 2️⃣:🟩➖️🅾️➖️🟥  ▶️  🟩➖️🟩➖️🟥 ")
+    message_lines.append("(원칙) 1️⃣:🅾️➖️✅️➖️🟥  ▶️  🟩➖️🟩➖️🟥 ")
     message_lines.append("----------------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
@@ -197,7 +196,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         vwma_200 = calculate_vwma(df['close'].values, df['volume'].values, 200) if df is not None else None
 
         five_twenty = " 🟩" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🅾️"
-        twenty_fifty = "🟩" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "🅾️"
+        twenty_fifty = "✅️" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "🟥"
         fifty_two_hundred = "🟩" if vwma_50 is not None and vwma_200 is not None and vwma_50 > vwma_200 else "🟥"
 
         # 줄바꿈 추가 및 랭크 번호 포함
