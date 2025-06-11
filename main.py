@@ -43,7 +43,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n(BTC-일봉-1>2){' 🟩 (추세상승)' if btc_status_1h else ' 🟥 (추세하락)'}\n(BTC [15분] 50>200){' 🟩 (추세상승)' if btc_status_4h else ' 🟥 (추세하락)'}"
+            message_with_status = f"{message}\n(BTC-일봉-1>2){' 🟩 (추세상승)' if btc_status_1h else ' 🟥 (추세하락)'}\n(BTC [15분] 20>50){' 🟩 (추세상승)' if btc_status_4h else ' 🟥 (추세하락)'}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
@@ -181,7 +181,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
     message_lines.append("----------------------------------")
     message_lines.append("[🟩] 일봉 / 🟥 ↗️ 🟩 돌파매수")
     message_lines.append("----------------------------------")
-    message_lines.append("(원칙) 1️⃣:🟥➖️✅️➖️🟥  ▶️  🟩➖️🟩➖️🟥 ")
+    message_lines.append("(원칙) 1️⃣:🟥➖️✅️➖️🅾️  ▶️  🟩➖️🟩➖️🟥 ")
     message_lines.append("----------------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
@@ -199,7 +199,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
         five_twenty = " 🟩" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🟥"
         twenty_fifty = "✅️" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "🟥"
-        fifty_two_hundred = "🟩" if vwma_100 is not None and vwma_200 is not None and vwma_100 > vwma_200 else "🟥"
+        fifty_two_hundred = "🟩" if vwma_100 is not None and vwma_200 is not None and vwma_100 > vwma_200 else "🅾️"
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
