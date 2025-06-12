@@ -142,7 +142,7 @@ def calculate_trade_price(coins):
             logging.error(str(e))
             
     time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:15])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
 
 # 가격 변동률을 계산하는 함수 (캔들 수가 2개 이상이면 진행)
 def calculate_price_change_percentage(coin):
@@ -181,7 +181,10 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
     message_lines.append("----------------------------------")
     message_lines.append("[🟩] 일봉 / 🟥 ↗️ 🟩 돌파매수")
     message_lines.append("----------------------------------")
-    message_lines.append("(원칙) 1️⃣:🅾️➖️✅️➖️🅾️  ▶️  🟩➖️🟩➖️🟥 ")
+    message_lines.append("(원칙) 1️⃣:🅾️➖️✅️➖️🅾️  ▶️  🟩➖️🟩➖️🟥 "
+    message_lines.append("(원칙) 2️⃣:✅️➖️🅾️➖️✅️  ▶️  🟩➖️🟩➖️🟩 ")
+                         
+    
     message_lines.append("----------------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
@@ -197,9 +200,9 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         vwma_200 = calculate_vwma(df['close'].values, df['volume'].values, 200) if df is not None else None
 
 
-        five_twenty = " 🟩" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🅾️"
-        twenty_fifty = "✅️" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "🟥"
-        fifty_two_hundred = "🟩" if vwma_100 is not None and vwma_200 is not None and vwma_100 > vwma_200 else "🅾️"
+        five_twenty = " ✅️" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🅾️"
+        twenty_fifty = "✅️" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "🅾️"
+        fifty_two_hundred = "✅️" if vwma_100 is not None and vwma_200 is not None and vwma_100 > vwma_200 else "🅾️"
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
