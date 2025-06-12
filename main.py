@@ -43,7 +43,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n(BTC-일봉-1>2){' 🟩 (추세상승)' if btc_status_1h else ' 🟥 (추세하락)'}\n(BTC [15분] 20>50){' 🟩 (추세상승)' if btc_status_4h else ' 🟥 (추세하락)'}"
+            message_with_status = f"{message}\n(BTC-[일봉]){' 🟩 (추세상승)' if btc_status_1h else ' 🟥 (추세하락)'}\n(BTC-[분봉]){' 🟩 (추세상승)' if btc_status_4h else ' 🟥 (추세하락)'}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
