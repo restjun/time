@@ -178,8 +178,8 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-    message_lines.append("(원칙) [🟩] 일봉 / 3️⃣:🅾️➖️✅️➖️🅾️")
-    message_lines.append("(원칙) [🟩] 일봉 / 5️⃣:🅾️➖️✅️➖️✅️")
+    message_lines.append("(원칙) [🟩] 일봉 / 3️⃣ / 🅾️➖️✅️➖️🅾️")
+    message_lines.append("(원칙) [🟩] 분봉 / 5️⃣ / 🅾️➖️✅️➖️✅️")
     message_lines.append("----------------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
