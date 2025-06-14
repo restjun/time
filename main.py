@@ -203,8 +203,8 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         )
 
     message_lines.append("----------------------------------")
-    message_lines.append("(BTC) [🟩] 일봉 / 3️⃣ / 🅾️➖️✅️➖️🅾️")
-    message_lines.append("(BTC) [🟩] 분봉 / 5️⃣ / 🅾️➖️✅️➖️✅️")
+    message_lines.append("(BTC-[일봉]) 🟩 / 3️⃣ / 🅾️➖️✅️➖️🅾️")
+    message_lines.append("(BTC-[분봉]) 🟩 / 5️⃣ / 🅾️➖️✅️➖️✅️")
 
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
