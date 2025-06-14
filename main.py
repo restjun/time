@@ -78,7 +78,7 @@ def check_bitcoin_status():
         btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
             btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 20)
-            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 60)
+            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
             btc_status_4h = 1 if btc_vwma_1_4h is not None and btc_vwma_2_4h is not None and btc_vwma_1_4h > btc_vwma_2_4h else 0
         else:
             logging.error("비트코인 4시간 데이터를 불러올 수 없습니다.")
@@ -193,13 +193,13 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         df = retry_request(pyupbit.get_ohlcv, coin, interval="minute60", count=200)
         vwma_5 = calculate_vwma(df['close'].values, df['volume'].values, 5) if df is not None else None
         vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20) if df is not None else None
-        vwma_60 = calculate_vwma(df['close'].values, df['volume'].values, 60) if df is not None else None
-        vwma_120 = calculate_vwma(df['close'].values, df['volume'].values, 120) if df is not None else None
+        vwma_50 = calculate_vwma(df['close'].values, df['volume'].values, 50) if df is not None else None
+        vwma_200 = calculate_vwma(df['close'].values, df['volume'].values, 200) if df is not None else None
 
 
         five_twenty = " 🟩" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🅾️"
-        twenty_fifty = "🟩" if vwma_20 is not None and vwma_60 is not None and vwma_20 > vwma_60 else "🟥"
-        fifty_two_hundred = "🟩" if vwma_60 is not None and vwma_120 is not None and vwma_60 > vwma_120 else "🟥"
+        twenty_fifty = "🟩" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "🟥"
+        fifty_two_hundred = "🟩" if vwma_50 is not None and vwma_200 is not None and vwma_60 > vwma_200 else "🟥"
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
