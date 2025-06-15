@@ -142,7 +142,7 @@ def calculate_trade_price(coins):
             logging.error(str(e))
             
     time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:5])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
 
 # 가격 변동률을 계산하는 함수 (캔들 수가 2개 이상이면 진행)
 def calculate_price_change_percentage(coin):
@@ -199,7 +199,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
-            f"{idx}. [ {coin.replace('KRW-', '')} ] : {trade_price}억 ({price_change_str})\n   {five_twenty}➖️{twenty_fifty}➖️{fifty_two_hundred}"
+            f"{idx}. {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) {five_twenty}➖️{twenty_fifty}➖️{fifty_two_hundred}"
         )
 
     message_lines.append("----------------------------------")
