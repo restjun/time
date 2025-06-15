@@ -230,6 +230,18 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
+    
+    def calculate_vwma_series(closes, volumes, window):
+    vwma_series = []
+    for i in range(len(closes)):
+        if i + 1 < window:
+            vwma_series.append(0)
+        else:
+            c = closes[i - window + 1:i + 1]
+            v = volumes[i - window + 1:i + 1]
+            vwma = sum(c * v) / sum(v)
+            vwma_series.append(vwma)
+    return vwma_series
 
 
 # 재시도 로직이 포함된 API 호출 래퍼
