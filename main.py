@@ -167,7 +167,16 @@ def calculate_price_change_percentage(coin):
         logging.error("캔들 데이터 부족으로 가격 변동률 계산 실패: %s", coin)
         return None
 
-# 정배열 돌파 코인 메시지 전송
+# 정배열 돌파 코인 메시지 
+def count_consecutive_condition(values_a, values_b, condition_func):
+    count = 0
+    for a, b in zip(reversed(values_a), reversed(values_b)):
+        if condition_func(a, b):
+            count += 1
+        else:
+            break
+    return count
+
 def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage):
     golden_trade_price_result = calculate_trade_price(golden_cross_coins)
     golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 300}
@@ -178,28 +187,42 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-
     message_lines.append("LONG-----------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
         price_change = calculate_price_change_percentage(coin)
         price_change_str = f"{price_change:+.2f}%" if price_change is not None else "N/A"
 
-        # VWMA 상태 계산
         df = retry_request(pyupbit.get_ohlcv, coin, interval="minute60", count=200)
-        vwma_5 = calculate_vwma(df['close'].values, df['volume'].values, 5) if df is not None else None
-        vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20) if df is not None else None
-        vwma_60 = calculate_vwma(df['close'].values, df['volume'].values, 60) if df is not None else None
-        vwma_120 = calculate_vwma(df['close'].values, df['volume'].values, 120) if df is not None else None
+        if df is None or len(df) < 120:
+            continue
 
+        closes = df['close'].values
+        volumes = df['volume'].values
 
-        five_twenty = " 🟩" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🅾️"
-        twenty_fifty = "✅️" if vwma_20 is not None and vwma_60 is not None and vwma_20 > vwma_60 else "🟥"
-        fifty_two_hundred = "✅️" if vwma_60 is not None and vwma_120 is not None and vwma_60 > vwma_120 else "🅾️"
+        vwma_5_arr = calculate_vwma_series(closes, volumes, 5)
+        vwma_20_arr = calculate_vwma_series(closes, volumes, 20)
+        vwma_60_arr = calculate_vwma_series(closes, volumes, 60)
+        vwma_120_arr = calculate_vwma_series(closes, volumes, 120)
 
-        # 줄바꿈 추가 및 랭크 번호 포함
+        # 현재 값
+        vwma_5 = vwma_5_arr[-1]
+        vwma_20 = vwma_20_arr[-1]
+        vwma_60 = vwma_60_arr[-1]
+        vwma_120 = vwma_120_arr[-1]
+
+        # 각 조건 지속 횟수 계산
+        ft_count = count_consecutive_condition(vwma_5_arr, vwma_20_arr, lambda a, b: a > b)
+        tf_count = count_consecutive_condition(vwma_20_arr, vwma_60_arr, lambda a, b: a > b)
+        fs_count = count_consecutive_condition(vwma_60_arr, vwma_120_arr, lambda a, b: a > b)
+
+        five_twenty = f"🟩({ft_count})" if vwma_5 > vwma_20 else f"🅾️({ft_count})"
+        twenty_fifty = f"✅️({tf_count})" if vwma_20 > vwma_60 else f"🟥({tf_count})"
+        fifty_two_hundred = f"✅️({fs_count})" if vwma_60 > vwma_120 else f"🅾️({fs_count})"
+
         message_lines.append(
-            f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) ")
+            f"{idx}. {five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})"
+        )
 
     message_lines.append("----------------------------------")
     message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️-✅️-🅾️")
