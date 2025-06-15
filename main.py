@@ -199,11 +199,11 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
-            f"{idx}.{five_twenty}▪️{twenty_fifty}▪️{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) ")
+            f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) ")
 
     message_lines.append("----------------------------------")
-    message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️▪️✅️▪️🅾️")
-    message_lines.append("(BTC-[분봉]) 🟩 [ 5️⃣ ] 🅾️▪️✅️▪️✅️")
+    message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️-✅️-🅾️")
+    message_lines.append("(BTC-[분봉]) 🟩 [ 5️⃣ ] 🅾️-✅️-✅️")
 
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
