@@ -198,7 +198,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
     message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️-✅️-🅾️")
     message_lines.append("(BTC-[분봉]) 🟩 [ 5️⃣ ] 🅾️-✅️-✅️")
 
-    send_telegram_message("\n".join(message_lines), btc_status_1h, btc_status_4h)
+    send_telegram_message("".join(message_lines), btc_status_1h, btc_status_4h)
 
 
 # 메인 실행
