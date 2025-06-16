@@ -191,14 +191,14 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         twenty_sixty = f"✅️({str(cnt_20_60).zfill(2)})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({str(cnt_20_60).zfill(2)})"
         sixty_hundredtwenty = f"🟩({str(cnt_60_120).zfill(2)})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️({str(cnt_60_120).zfill(2)})"
 
-        message_lines.append(f"{str(idx).rjust(2)}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty} {coin.replace('KRW-', '')}:{trade_price}억({price_change_str})")
+        message_lines.append(f"{str(idx).rjust(2)}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty}{coin.replace('KRW-', '')}:{trade_price}억({price_change_str})")
 
 
     message_lines.append("----------------------------------")
     message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️-✅️-🅾️")
     message_lines.append("(BTC-[분봉]) 🟩 [ 5️⃣ ] 🅾️-✅️-✅️")
 
-    send_telegram_message("".join(message_lines), btc_status_1h, btc_status_4h)
+    send_telegram_message("/n".join(message_lines), btc_status_1h, btc_status_4h)
 
 
 # 메인 실행
