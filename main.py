@@ -35,13 +35,6 @@ previous_trade_prices = {}
 # 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
 
-import time
-import logging
-import requests
-from datetime import datetime
-import pytz
-import pyupbit
-
 # 텔레그램 메시지 전송 함수
 def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=False, btc_price_change_percentage=0.0):
     max_retries = 3
