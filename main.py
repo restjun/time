@@ -93,7 +93,7 @@ def check_bitcoin_status():
     btc_ticker = "KRW-BTC"
     btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute1440", count=200)
     if btc_df is not None and len(btc_df) >= 200:
-        btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 1)
+        btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 
         btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 2)
         btc_status_1h = 1 if btc_vwma_1 and btc_vwma_2 and btc_vwma_1 > btc_vwma_2 else 0
 
@@ -191,7 +191,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         twenty_sixty = f"✅️({str(cnt_20_60).zfill(2)})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({str(cnt_20_60).zfill(2)})"
         sixty_hundredtwenty = f"🟩({str(cnt_60_120).zfill(2)})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️({str(cnt_60_120).zfill(2)})"
 
-        message_lines.append(f"{str(idx).rjust(2)}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty}{coin.replace('KRW-', '')}:{trade_price}억({price_change_str})")
+        message_lines.append(f"{str(idx).rjust(2)}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty} {coin.replace('KRW-', '')}:{trade_price}억{price_change_str}")
 
 
     message_lines.append("----------------------------------")
