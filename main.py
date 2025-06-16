@@ -160,23 +160,6 @@ def calculate_trade_price(coins):
 
 
 # 정배열 메시지 전송
-def estimate_bars_to_cross(short_vwma_list, long_vwma_list):
-    min_len = min(len(short_vwma_list), len(long_vwma_list))
-    if min_len < 6:
-        return "∞"
-    
-    diff_list = [short_vwma_list[-i-1] - long_vwma_list[-i-1] for i in range(5)]
-    delta_list = [diff_list[i] - diff_list[i+1] for i in range(4)]
-
-    avg_delta = sum(delta_list) / len(delta_list)
-    current_diff = short_vwma_list[-1] - long_vwma_list[-1]
-
-    if avg_delta < 0:
-        estimated = int(abs(current_diff / avg_delta))
-        return str(min(99, estimated)).zfill(2)
-    return "∞"
-
-
 def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage):
     golden_trade_price_result = calculate_trade_price(golden_cross_coins)
     golden_trade_price_result = {coin: val for coin, val in golden_trade_price_result.items() if val >= 300}
@@ -195,52 +178,27 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         if df is None or len(df) < 120:
             continue
 
-        prices = df['close'].values
-        volumes = df['volume'].values
-
-        vwma_5_list = [calculate_vwma(prices[i-4:i+1], volumes[i-4:i+1], 5) for i in range(4, len(df))]
-        vwma_20_list = [calculate_vwma(prices[i-19:i+1], volumes[i-19:i+1], 20) for i in range(19, len(df))]
-        vwma_60_list = [calculate_vwma(prices[i-59:i+1], volumes[i-59:i+1], 60) for i in range(59, len(df))]
-        vwma_120_list = [calculate_vwma(prices[i-119:i+1], volumes[i-119:i+1], 120) for i in range(119, len(df))]
-
-        vwma_5 = vwma_5_list[-1]
-        vwma_20 = vwma_20_list[-1]
-        vwma_60 = vwma_60_list[-1]
-        vwma_120 = vwma_120_list[-1]
+        vwma_5 = calculate_vwma(df['close'].values, df['volume'].values, 5)
+        vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20)
+        vwma_60 = calculate_vwma(df['close'].values, df['volume'].values, 60)
+        vwma_120 = calculate_vwma(df['close'].values, df['volume'].values, 120)
 
         cnt_5_20 = count_consecutive_vwma_condition(df, 5, 20)
         cnt_20_60 = count_consecutive_vwma_condition(df, 20, 60)
         cnt_60_120 = count_consecutive_vwma_condition(df, 60, 120)
 
-        # 5-20
-        if vwma_5 > vwma_20:
-            five_twenty = f"🟩({str(cnt_5_20).zfill(2)})"
-        else:
-            estimate_5_20 = estimate_bars_to_cross(vwma_5_list[-5:], vwma_20_list[-5:])
-            five_twenty = f"🟥(~{estimate_5_20})"
-
-        # 20-60
-        if vwma_20 > vwma_60:
-            twenty_sixty = f"✅️({str(cnt_20_60).zfill(2)})"
-        else:
-            estimate_20_60 = estimate_bars_to_cross(vwma_20_list[-5:], vwma_60_list[-5:])
-            twenty_sixty = f"🟥(~{estimate_20_60})"
-
-        # 60-120
-        if vwma_60 > vwma_120:
-            sixty_hundredtwenty = f"🟩({str(cnt_60_120).zfill(2)})"
-        else:
-            estimate_60_120 = estimate_bars_to_cross(vwma_60_list[-5:], vwma_120_list[-5:])
-            sixty_hundredtwenty = f"🟥(~{estimate_60_120})"
+        five_twenty = f"🟩({str(cnt_5_20).zfill(2)})" if vwma_5 and vwma_20 and vwma_5 > vwma_20 else f"🅾️({str(cnt_5_20).zfill(2)})"
+        twenty_sixty = f"✅️({str(cnt_20_60).zfill(2)})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({str(cnt_20_60).zfill(2)})"
+        sixty_hundredtwenty = f"🟩({str(cnt_60_120).zfill(2)})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️({str(cnt_60_120).zfill(2)})"
 
         message_lines.append(f"{str(idx).rjust(2)}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty} {coin.replace('KRW-', '')}:{trade_price}억({price_change_str})")
+
 
     message_lines.append("----------------------------------")
     message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️-✅️-🅾️")
     message_lines.append("(BTC-[분봉]) 🟩 [ 5️⃣ ] 🅾️-✅️-✅️")
 
     send_telegram_message("\n".join(message_lines), btc_status_1h, btc_status_4h)
-
 
 
 # 메인 실행
