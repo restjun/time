@@ -35,6 +35,13 @@ previous_trade_prices = {}
 # 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
 
+import time
+import logging
+import requests
+from datetime import datetime
+import pytz
+import pyupbit
+
 # 텔레그램 메시지 전송 함수
 def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=False, btc_price_change_percentage=0.0):
     max_retries = 3
@@ -180,11 +187,14 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         cnt_20_60 = count_consecutive_vwma_condition(df, 20, 60)
         cnt_60_120 = count_consecutive_vwma_condition(df, 60, 120)
 
-        five_twenty = f"🟩({cnt_5_20:>2})" if vwma_5 and vwma_20 and vwma_5 > vwma_20 else f"🅾️({cnt_5_20:>2})"
-        twenty_sixty = f"✅️({cnt_20_60:>2})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({cnt_20_60:>2})"
-        sixty_hundredtwenty = f"🟩({cnt_60_120:>2})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️({cnt_60_120:>2})"
+        five_twenty = f"🟩({cnt_5_20})" if vwma_5 and vwma_20 and vwma_5 > vwma_20 else f"🟥({cnt_5_20})"
+        twenty_sixty = f"🟩({cnt_20_60})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({cnt_20_60})"
+        sixty_hundredtwenty = f"🟩({cnt_60_120})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🟥({cnt_60_120})"
 
-    message_lines.append(f"{idx:>2}. {five_twenty}-{twenty_sixty}-{sixty_hundredtwenty}  {coin.replace('KRW-', ''):<6} : {trade_price:>4}억 ({price_change_str})")
+        message_lines.append(
+            f"{idx}. {five_twenty}-{twenty_sixty}-{sixty_hundredtwenty}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})"
+        )
+
     message_lines.append("----------------------------------")
     message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️-✅️-🅾️")
     message_lines.append("(BTC-[분봉]) 🟩 [ 5️⃣ ] 🅾️-✅️-✅️")
@@ -197,7 +207,6 @@ def main():
     btc_status_1h, btc_status_4h = check_bitcoin_status()
     golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute1440", count=200)
     send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
-
 
 # 재시도 로직이 포함된 API 호출 래퍼
 def retry_request(func, *args, **kwargs):
