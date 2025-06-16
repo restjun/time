@@ -184,12 +184,15 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         vwma_120 = calculate_vwma(df['close'].values, df['volume'].values, 120)
 
         cnt_5_20 = count_consecutive_vwma_condition(df, 5, 20)
+        cnt_5_20_reverse = count_consecutive_reverse_vwma_condition(df, 5, 20)
         cnt_20_60 = count_consecutive_vwma_condition(df, 20, 60)
+        cnt_20_60_reverse = count_consecutive_reverse_vwma_condition(df, 20, 60)        
         cnt_60_120 = count_consecutive_vwma_condition(df, 60, 120)
+        cnt_60_120_reverse = count_consecutive_reverse_vwma_condition(df, 60, 120)
 
-        five_twenty = f"🟩({str(cnt_5_20).zfill(2)})" if vwma_5 and vwma_20 and vwma_5 > vwma_20 else f"🅾️({str(cnt_5_20).zfill(2)})"
-        twenty_sixty = f"✅️({str(cnt_20_60).zfill(2)})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({str(cnt_20_60).zfill(2)})"
-        sixty_hundredtwenty = f"🟩({str(cnt_60_120).zfill(2)})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️({str(cnt_60_120).zfill(2)})"
+        five_twenty = f"🟩({str(cnt_5_20).zfill(2)})" if vwma_5 and vwma_20 and vwma_5 > vwma_20 else f"🅾️({str(cnt_5_20_reverse).zfill(2)})"
+        twenty_sixty = f"✅️({str(cnt_20_60).zfill(2)})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({str(cnt_20_60_reverse).zfill(2)})"
+        sixty_hundredtwenty = f"🟩({str(cnt_60_120).zfill(2)})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️({str(cnt_60_120_reverse).zfill(2)})"
 
         message_lines.append(f"{str(idx).rjust(2)}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty} {coin.replace('KRW-', '')}:{trade_price}억({price_change_str})")
 
