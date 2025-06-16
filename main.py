@@ -191,7 +191,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         twenty_sixty = f"✅️{cnt_20_60:>2}" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥{cnt_20_60:>2}"
         sixty_hundredtwenty = f"🟩{cnt_60_120:>2}" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️{cnt_60_120:>2}"
 
-        message_lines.append(f"{idx}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty}{coin.replace('KRW-', '')}:{trade_price}억({price_change_str})")
+        message_lines.append(f"{idx}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty} /{coin.replace('KRW-', '')}:{trade_price}억({price_change_str})")
 
     message_lines.append("----------------------------------")
     message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️-✅️-🅾️")
