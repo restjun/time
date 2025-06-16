@@ -160,46 +160,6 @@ def calculate_trade_price(coins):
 
 
 # 정배열 메시지 전송
-
-import pyupbit
-
-def calculate_vwma(closes, volumes, window):
-    if len(closes) < window or len(volumes) < window:
-        return None
-    closes = closes[-window:]
-    volumes = volumes[-window:]
-    return (closes * volumes).sum() / volumes.sum()
-
-def count_consecutive_vwma_condition(df, short_window, long_window):
-    count = 0
-    closes = df['close'].values
-    volumes = df['volume'].values
-
-    for i in range(len(df) - long_window):
-        vwma_short = calculate_vwma(closes[i:i+short_window], volumes[i:i+short_window], short_window)
-        vwma_long = calculate_vwma(closes[i:i+long_window], volumes[i:i+long_window], long_window)
-
-        if vwma_short > vwma_long:
-            count += 1
-        else:
-            count = 0  # 리셋
-    return count
-
-def count_consecutive_reverse_vwma_condition(df, short_window, long_window):
-    count = 0
-    closes = df['close'].values
-    volumes = df['volume'].values
-
-    for i in range(len(df) - long_window):
-        vwma_short = calculate_vwma(closes[i:i+short_window], volumes[i:i+short_window], short_window)
-        vwma_long = calculate_vwma(closes[i:i+long_window], volumes[i:i+long_window], long_window)
-
-        if vwma_short < vwma_long:
-            count += 1
-        else:
-            count = 0  # 리셋
-    return count
-
 def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage):
     golden_trade_price_result = calculate_trade_price(golden_cross_coins)
     golden_trade_price_result = {coin: val for coin, val in golden_trade_price_result.items() if val >= 300}
@@ -222,41 +182,24 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20)
         vwma_60 = calculate_vwma(df['close'].values, df['volume'].values, 60)
         vwma_120 = calculate_vwma(df['close'].values, df['volume'].values, 120)
- 
-        cnt_5_20 = count_consecutive_vwma_condition(df, 5, 20)
-        cnt_5_20_reverse = count_consecutive_reverse_vwma_condition(df, 5, 20)
-        cnt_20_60 = count_consecutive_vwma_condition(df, 20, 60)
-        cnt_20_60_reverse = count_consecutive_reverse_vwma_condition(df, 20, 60)        
-        cnt_60_120 = count_consecutive_vwma_condition(df, 60, 120)
-        cnt_60_120_reverse = count_consecutive_reverse_vwma_condition(df, 60, 120)
-        
-        # VWMA 역배열 지속 횟수 계산 함수
-def count_consecutive_reverse_vwma_condition(df, short_period, long_period):
-    closes = df['close'].values
-    volumes = df['volume'].values
-    count = 0
-    for i in range(len(closes) - 1, long_period - 2, -1):
-        short_vwma = calculate_vwma(closes[:i+1], volumes[:i+1], short_period)
-        long_vwma = calculate_vwma(closes[:i+1], volumes[:i+1], long_period)
-        if short_vwma is None or long_vwma is None:
-            break
-        if short_vwma < long_vwma:
-            count += 1
-        else:
-            break
-    return count
 
-        five_twenty = f"🟩({str(cnt_5_20).zfill(2)})" if vwma_5 and vwma_20 and vwma_5 > vwma_20 else f"🅾️({str(cnt_5_20_reverse).zfill(2)})"
-        twenty_sixty = f"✅️({str(cnt_20_60).zfill(2)})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({str(cnt_20_60_reverse).zfill(2)})"
-        sixty_hundredtwenty = f"🟩({str(cnt_60_120).zfill(2)})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️({str(cnt_60_120_reverse).zfill(2)})"
+        cnt_5_20 = count_consecutive_vwma_condition(df, 5, 20)
+        cnt_20_60 = count_consecutive_vwma_condition(df, 20, 60)
+        cnt_60_120 = count_consecutive_vwma_condition(df, 60, 120)
+
+        five_twenty = f"🟩({str(cnt_5_20).zfill(2)})" if vwma_5 and vwma_20 and vwma_5 > vwma_20 else f"🅾️({str(cnt_5_20).zfill(2)})"
+        twenty_sixty = f"✅️({str(cnt_20_60).zfill(2)})" if vwma_20 and vwma_60 and vwma_20 > vwma_60 else f"🟥({str(cnt_20_60).zfill(2)})"
+        sixty_hundredtwenty = f"🟩({str(cnt_60_120).zfill(2)})" if vwma_60 and vwma_120 and vwma_60 > vwma_120 else f"🅾️({str(cnt_60_120).zfill(2)})"
 
         message_lines.append(f"{str(idx).rjust(2)}.{five_twenty}{twenty_sixty}{sixty_hundredtwenty} {coin.replace('KRW-', '')}:{trade_price}억({price_change_str})")
+
 
     message_lines.append("----------------------------------")
     message_lines.append("(BTC-[일봉]) 🟩 [ 3️⃣ ] 🅾️-✅️-🅾️")
     message_lines.append("(BTC-[분봉]) 🟩 [ 5️⃣ ] 🅾️-✅️-✅️")
 
     send_telegram_message("\n".join(message_lines), btc_status_1h, btc_status_4h)
+
 
 # 메인 실행
 def main():
