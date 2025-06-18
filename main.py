@@ -202,8 +202,8 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
             f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) ")
 
     message_lines.append("----------------------------------")
-    message_lines.append("(비트-[일봉]) 🟩 [ 1 ] 🅾️-✅️-🅾️")
-    message_lines.append("(비트-[일봉]) 🟩 [ 2 ] 🅾️-✅️-✅️")
+    message_lines.append("(알트-[일봉]) 🟩 [ 1 ] 🅾️-✅️-🅾️")
+    message_lines.append("(알트-[일봉]) 🟩 [ 2 ] 🅾️-✅️-✅️")
     
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
