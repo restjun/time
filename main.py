@@ -186,7 +186,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         price_change_str = f"{price_change:+.2f}%" if price_change is not None else "N/A"
 
         # VWMA 상태 계산
-        df = retry_request(pyupbit.get_ohlcv, coin, interval="minute15", count=200)
+        df = retry_request(pyupbit.get_ohlcv, coin, interval="minute60", count=200)
         vwma_5 = calculate_vwma(df['close'].values, df['volume'].values, 5) if df is not None else None
         vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20) if df is not None else None
         vwma_60 = calculate_vwma(df['close'].values, df['volume'].values, 60) if df is not None else None
