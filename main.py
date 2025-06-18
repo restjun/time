@@ -75,7 +75,7 @@ def check_bitcoin_status():
         btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 2)
         btc_status_1h = 1 if btc_vwma_1 is not None and btc_vwma_2 is not None and btc_vwma_1 > btc_vwma_2 else 0
 
-        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
+        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
             btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 20)
             btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 60)
@@ -106,7 +106,7 @@ def find_golden_cross_coins(tickers, interval, count):
 # 메인 함수
 def main():
     btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute15", count=200)
+    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute60", count=200)
     send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
