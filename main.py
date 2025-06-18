@@ -75,7 +75,7 @@ def check_bitcoin_status():
         btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 2)
         btc_status_1h = 1 if btc_vwma_1 is not None and btc_vwma_2 is not None and btc_vwma_1 > btc_vwma_2 else 0
 
-        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
+        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
             btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 20)
             btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 60)
@@ -96,8 +96,8 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 1)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 2)
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 60)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -106,7 +106,7 @@ def find_golden_cross_coins(tickers, interval, count):
 # 메인 함수
 def main():
     btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute1440", count=200)
+    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute15", count=200)
     send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
@@ -195,7 +195,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
         five_twenty = " ⬛" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🅾️"
         twenty_fifty = "✅️" if vwma_20 is not None and vwma_60 is not None and vwma_20 > vwma_60 else "⬛"
-        fifty_two_hundred = "⬛" if vwma_60 is not None and vwma_120 is not None and vwma_60 > vwma_120 else "🅾️"
+        fifty_two_hundred = "✅️" if vwma_60 is not None and vwma_120 is not None and vwma_60 > vwma_120 else "🅾️"
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
@@ -203,6 +203,8 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     message_lines.append("----------------------------------")
     message_lines.append("(비트-[일봉]) 🟩 [ 1 ] 🅾️-✅️-🅾️")
+    message_lines.append("(비트-[일봉]) 🟩 [ 1 ] 🅾️-✅️-✅️")
+    
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
 
