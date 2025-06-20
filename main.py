@@ -194,15 +194,15 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
 
         five_twenty = " ✅️" if vwma_1 is not None and vwma_50 is not None and vwma_1 > vwma_50 else " 🅾️"
-        twenty_fifty = "✅️" if vwma_50 is not None and vwma_200 is not None and vwma_50 > vwma_200 else "🅾️"
-        fifty_two_hundred = "✅️" if vwma_100 is not None and vwma_200 is not None and vwma_100 > vwma_200 else "🅾️"
+        twenty_fifty = "✅️" if vwma_1 is not None and vwma_100 is not None and vwma_1 > vwma_100 else "🅾️"
+        fifty_two_hundred = "✅️" if vwma_50 is not None and vwma_200 is not None and vwma_50 > vwma_200 else "🅾️"
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
             f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) ")
 
     message_lines.append("----------------------------------")
-    message_lines.append("(알트-[집중]) 🟩 [ ❓️ ] 🅾️-✅️-🅾️")
+    message_lines.append("(알트-[집중]) 🟩 [ ❓️ ] ✅️-🅾️-🅾️")
     
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
