@@ -96,8 +96,8 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 1)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 2)
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 200)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -106,7 +106,7 @@ def find_golden_cross_coins(tickers, interval, count):
 # 메인 함수
 def main():
     btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute1440", count=200)
+    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute60", count=200)
     send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
@@ -170,10 +170,10 @@ def calculate_price_change_percentage(coin):
 # 정배열 돌파 코인 메시지 전송
 def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage):
     golden_trade_price_result = calculate_trade_price(golden_cross_coins)
-    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 100}
+    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 1000}
 
     if not golden_trade_price_result:
-        message = "🔴 현재 100억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
+        message = "🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
         send_telegram_message(message, btc_status_1h, btc_status_4h)
         return
 
@@ -202,7 +202,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
             f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) ")
 
     message_lines.append("----------------------------------")
-    message_lines.append("(알트-[집중]) 🟩 [ ❓️ ] ✅️-🅾️-🅾️")
+    message_lines.append("(알트-[집중]) 🟩 [ ❓️ ] 🅾️-✅️-✅️")
     
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
