@@ -77,8 +77,8 @@ def check_bitcoin_status():
 
         btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
-            btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 20)
-            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 60)
+            btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
+            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 200)
             btc_status_4h = 1 if btc_vwma_1_4h is not None and btc_vwma_2_4h is not None and btc_vwma_1_4h > btc_vwma_2_4h else 0
         else:
             logging.error("비트코인 4시간 데이터를 불러올 수 없습니다.")
@@ -170,10 +170,10 @@ def calculate_price_change_percentage(coin):
 # 정배열 돌파 코인 메시지 전송
 def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage):
     golden_trade_price_result = calculate_trade_price(golden_cross_coins)
-    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 200}
+    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 100}
 
     if not golden_trade_price_result:
-        message = "🔴 현재 200억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
+        message = "🔴 현재 100억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
         send_telegram_message(message, btc_status_1h, btc_status_4h)
         return
 
@@ -190,12 +190,12 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 1) if df is not None else None
         vwma_50 = calculate_vwma(df['close'].values, df['volume'].values, 50) if df is not None else None
         vwma_200 = calculate_vwma(df['close'].values, df['volume'].values, 200) if df is not None else None
-        vwma_10 = calculate_vwma(df['close'].values, df['volume'].values, 10) if df is not None else None
+        vwma_100 = calculate_vwma(df['close'].values, df['volume'].values, 100) if df is not None else None
 
 
         five_twenty = " ✅️" if vwma_1 is not None and vwma_50 is not None and vwma_1 > vwma_50 else " 🅾️"
-        twenty_fifty = "✅️" if vwma_1 is not None and vwma_200 is not None and vwma_1 > vwma_200 else "🅾️"
-        fifty_two_hundred = "✅️" if vwma_50 is not None and vwma_200 is not None and vwma_50 > vwma_200 else "🅾️"
+        twenty_fifty = "✅️" if vwma_50 is not None and vwma_200 is not None and vwma_5 > vwma_200 else "🅾️"
+        fifty_two_hundred = "✅️" if vwma_100 is not None and vwma_200 is not None and vwma_100 > vwma_200 else "🅾️"
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
