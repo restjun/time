@@ -195,7 +195,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
         five_twenty = " ✅️" if vwma_1 is not None and vwma_50 is not None and vwma_1 > vwma_50 else " 🅾️"
         twenty_fifty = "✅️" if vwma_1 is not None and vwma_100 is not None and vwma_1 > vwma_100 else "🅾️"
-        fifty_two_hundred = "✅️" if vwma_50 is not None and vwma_200 is not None and vwma_50 > vwma_200 else "🅾️"
+        fifty_two_hundred = "✅️" if vwma_1 is not None and vwma_200 is not None and vwma_1 > vwma_200 else "🅾️"
 
         # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
