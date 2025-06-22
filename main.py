@@ -43,7 +43,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n(비트-[일봉]){' 🟩 [양봉정렬] 🟩🟩🟩 ' if btc_status_1h else ' 🟥 '}\n(비트-[분봉]){' 🟩 [캔들] 20개이상 추세유지 🔁' if btc_status_4h else ' 🟥 '}"
+            message_with_status = f"{message}\n(비트-[일봉]){' 🟩 ' if btc_status_1h else ' 🟥 '}\n(비트-[분봉]){' 🟩 ' if btc_status_4h else ' 🟥 '}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
@@ -77,8 +77,8 @@ def check_bitcoin_status():
 
         btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
-            btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
-            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 200)
+            btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 1)
+            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
             btc_status_4h = 1 if btc_vwma_1_4h is not None and btc_vwma_2_4h is not None and btc_vwma_1_4h > btc_vwma_2_4h else 0
         else:
             logging.error("비트코인 4시간 데이터를 불러올 수 없습니다.")
@@ -179,7 +179,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     message_lines = []
 
-    message_lines.append("LONG2️⃣------------------------------")
+    message_lines.append("LONG2️⃣---------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
         price_change = calculate_price_change_percentage(coin)
