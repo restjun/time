@@ -97,7 +97,7 @@ def find_golden_cross_coins(tickers, interval, count):
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
             vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 1)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 2)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 50)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -179,7 +179,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     message_lines = []
 
-    message_lines.append("LONG 1️⃣➖️2️⃣ 일봉")
+    message_lines.append("LONG 1️⃣➖️5️⃣0️⃣ 일봉")
     message_lines.append("----------------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
@@ -203,7 +203,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
             f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) ")
 
     message_lines.append("----------------------------------")
-    message_lines.append("(매매-[집중]) 🟩 [ 이기는 방법 ] 🅾️-🅾️-🅾️")
+    message_lines.append("(매매-[집중]) 🟩 [ 이기는 방법 ] ✅️-🅾️-🅾️")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
 
