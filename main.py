@@ -223,7 +223,7 @@ def retry_request(func, *args, **kwargs):
     return None
 
 # 스케줄러 설정
-schedule.every(1).minutes.do(main)
+schedule.every(60).minutes.do(main)
 
 def run_scheduler():
     while True:
