@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+8from fastapi import FastAPI
 import pyupbit
 import telepot
 import schedule
@@ -223,7 +223,7 @@ def retry_request(func, *args, **kwargs):
     return None
 
 # 스케줄러 설정
-schedule.every(60).minutes.do(main)
+schedule.every(15).minutes.do(main)
 
 def run_scheduler():
     while True:
