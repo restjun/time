@@ -72,13 +72,13 @@ def check_bitcoin_status():
     btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute1440", count=200)
     if btc_df is not None and len(btc_df) >= 200:
         btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 1)
-        btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 2)
+        btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 50)
         btc_status_1h = 1 if btc_vwma_1 is not None and btc_vwma_2 is not None and btc_vwma_1 > btc_vwma_2 else 0
 
         btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute1440", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
             btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 1)
-            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
+            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 200)
             btc_status_4h = 1 if btc_vwma_1_4h is not None and btc_vwma_2_4h is not None and btc_vwma_1_4h > btc_vwma_2_4h else 0
         else:
             logging.error("비트코인 4시간 데이터를 불러올 수 없습니다.")
