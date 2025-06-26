@@ -178,7 +178,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     message_lines = []
 
-    message_lines.append("LONG (🎯 직전고점 돌파 & 2️⃣0️⃣➖️5️⃣0️⃣ 돌파)")
+    message_lines.append("SHORT(🎯 직전고점 돌파 2️⃣0️⃣➖️5️⃣0️⃣)")
     message_lines.append("----------------------------------")
 
     for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
