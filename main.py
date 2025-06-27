@@ -177,13 +177,18 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-
-    message_lines.append("3️⃣/5️⃣ 자리(🎯 직전고점 돌파 2️⃣0️⃣➖️5️⃣0️⃣)")
+    message_lines.append("1️⃣ 자리(🎯 직전고점 돌파 2️⃣0️⃣➖️5️⃣0️⃣)")
     message_lines.append("----------------------------------")
 
-    for idx, (coin, trade_price) in enumerate(sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True), start=1):
+    idx = 1
+    for coin, trade_price in sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True):
         price_change = calculate_price_change_percentage(coin)
-        price_change_str = f"{price_change:+.2f}%" if price_change is not None else "N/A"
+        
+        # 상승 중인 코인만 전송 (+%)
+        if price_change is None or price_change <= 0:
+            continue
+
+        price_change_str = f"{price_change:+.2f}%"
 
         # VWMA 상태 계산
         df = retry_request(pyupbit.get_ohlcv, coin, interval="minute60", count=200)
@@ -192,21 +197,26 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         vwma_50 = calculate_vwma(df['close'].values, df['volume'].values, 50) if df is not None else None
         vwma_200 = calculate_vwma(df['close'].values, df['volume'].values, 200) if df is not None else None
 
-
         five_twenty = " ✅️" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🅾️"
         twenty_fifty = "✅️" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "🅾️"
         fifty_two_hundred = "✅️" if vwma_50 is not None and vwma_200 is not None and vwma_50 > vwma_200 else "🅾️"
 
-        # 줄바꿈 추가 및 랭크 번호 포함
         message_lines.append(
-            f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str}) ")
+            f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
+        idx += 1
+
+    # 상승 중인 코인이 없다면 메시지 전송하지 않음
+    if idx == 1:
+        message = "🔴 현재 상승 중이며 500억 이상 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
+        send_telegram_message(message, btc_status_1h, btc_status_4h)
+        return
 
     message_lines.append("----------------------------------")
     message_lines.append("(매매-[1️⃣]) ✅️-🅾️-🅾️")
     message_lines.append("(매매-[3️⃣]) ✅️-🅾️-✅️")
     message_lines.append("(매매-[5️⃣]) 🅾️-✅️-✅️")
     message_lines.append("(매매-[🎯]) ✅️-✅️-✅️")
-    
+
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
 
