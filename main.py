@@ -207,7 +207,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     # 상승 중인 코인이 없다면 메시지 전송하지 않음
     if idx == 1:
-        message = "🔴 현재 상승 중이며 500억 이상 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
+        message = "🔴 현재 상승 중 코인이 없습니다.\n\n업비트 상태 확인 완료."
         send_telegram_message(message, btc_status_1h, btc_status_4h)
         return
 
