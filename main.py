@@ -177,7 +177,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-    message_lines.append("3️⃣/5️⃣자리(🎯1차 정배열 +1~3시간 2차 정배열 지점만 매수)")
+    message_lines.append("3️⃣/5️⃣ 자리 (🎯 돌파와눌림은 1차 정배열 후 최소 1~5시간 안에 다음 2차 정배열이 되야한다. 이 이상 시간은 세력의 이탈로 봐야한다.)")
     message_lines.append("----------------------------------")
 
     idx = 1
