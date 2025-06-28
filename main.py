@@ -177,7 +177,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-    message_lines.append("3️⃣/5️⃣ 자리(🎯 직전고점 돌파 2️⃣0️⃣➖️5️⃣0️⃣)")
+    message_lines.append("3️⃣/5️⃣자리(🎯1차 정배열 +1~3시간 2차 정배열 지점만 매수)")
     message_lines.append("----------------------------------")
 
     idx = 1
