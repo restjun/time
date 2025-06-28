@@ -214,7 +214,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
     message_lines.append("----------------------------------")
     message_lines.append("(매매-[1️⃣]) ✅️-🅾️-🅾️ / 🅾️-✅️-🅾️")
     message_lines.append("(매매-[2️⃣]) ✅️-🅾️-✅️ / 🅾️-✅️-✅️")
-
+    message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
 
