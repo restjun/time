@@ -177,7 +177,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-    message_lines.append("3️⃣/5️⃣ 자리 (🎯 돌파와눌림은 1차 정배열 후 최소 1~5시간 안에 다음 2차 정배열이 되야한다. 이 이상 시간은 세력의 이탈로 봐야한다.)")
+    message_lines.append("2️⃣ 자리 (🎯 돌파와눌림은 1차 정배열 후 최소 1~5시간 안에 다음 2차 정배열이 되야한다. 이 이상 시간은 세력의 이탈로 봐야한다.)")
     message_lines.append("----------------------------------")
 
     idx = 1
@@ -207,12 +207,11 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     # 상승 중인 코인이 없다면 메시지 전송하지 않음
     if idx == 1:
-        message = "🔴 현재 3️⃣/5️⃣ 자리 상승 중 코인이 없습니다.\n\n업비트 상태 확인 완료."
+        message = "🔴 현재 2️⃣ 자리 상승 중 코인이 없습니다.\n\n업비트 상태 확인 완료."
         send_telegram_message(message, btc_status_1h, btc_status_4h)
         return
 
     message_lines.append("----------------------------------")
-    message_lines.append("(매매-[1️⃣]) ✅️-🅾️-🅾️ / 🅾️-✅️-🅾️")
     message_lines.append("(매매-[2️⃣]) ✅️-🅾️-✅️ / 🅾️-✅️-✅️")
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
