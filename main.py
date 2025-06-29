@@ -177,7 +177,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-    message_lines.append("2️⃣ 자리 (🎯 5-20 정배열 된후 5시간 전에는 20-50 정배열이 되야 수익 구간이 있다. 또는 20-50 돌파구간이 직점 고점을 돌파할대 가능성이 있다.)")
+    message_lines.append("🎯 20-50 정배열 주도주 확인)")
     message_lines.append("----------------------------------")
 
     idx = 1
@@ -212,7 +212,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines.append("----------------------------------")
-    message_lines.append("(매매-[2️⃣]) ✅️-🅾️-✅️ / 🅾️-✅️-✅️")
+    message_lines.append("(매매-[상승중]) ✅️-✅️-🅾️ / ✅️-✅️-✅️")
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
