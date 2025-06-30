@@ -110,7 +110,7 @@ def main():
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
 def calculate_trade_price(coins):
-    url = "https://api.upbit.com/v1/candles/minutes/10"
+    url = "https://api.upbit.com/v1/candles/minutes/1"
     total_trade_price = dict()
 
     # 한국 시간대 설정
@@ -121,7 +121,7 @@ def calculate_trade_price(coins):
         total_trade_price = dict()
 
     for coin in coins:
-        querystring = {"market": coin, "count": 144}
+        querystring = {"market": coin, "count": 60}
         response = retry_request(requests.get, url, params=querystring)
         data = response.json()
 
@@ -141,7 +141,7 @@ def calculate_trade_price(coins):
             logging.error(str(e))
             
     time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:30])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:100])
 
 # 가격 변동률을 계산하는 함수 (캔들 수가 2개 이상이면 진행)
 def calculate_price_change_percentage(coin):
