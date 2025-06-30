@@ -185,7 +185,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         price_change = calculate_price_change_percentage(coin)
         
         # 상승 중인 코인만 전송 (+%)
-        if price_change is None or price_change <= 1:
+        if price_change is None or price_change <= 0:
             continue
 
         price_change_str = f"{price_change:+.2f}%"
