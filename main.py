@@ -96,7 +96,7 @@ def find_golden_cross_coins(tickers, interval, count):
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
             vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 5)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 50)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
