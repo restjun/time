@@ -68,13 +68,13 @@ def calculate_vwma(data, volume, period):
 # 비트코인 상태 확인 함수 업데이트
 def check_bitcoin_status():
     btc_ticker = "KRW-BTC"
-    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
+    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute240", count=200)
     if btc_df is not None and len(btc_df) >= 200:
         btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 5)
         btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 20)
         btc_status_1h = 1 if btc_vwma_1 is not None and btc_vwma_2 is not None and btc_vwma_1 > btc_vwma_2 else 0
 
-        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute60", count=200)
+        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute240", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
             btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 5)
             btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 20)
@@ -105,7 +105,7 @@ def find_golden_cross_coins(tickers, interval, count):
 # 메인 함수
 def main():
     btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute60", count=200)
+    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute240", count=200)
     send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
@@ -191,7 +191,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         price_change_str = f"{price_change:+.2f}%"
 
         # VWMA 상태 계산
-        df = retry_request(pyupbit.get_ohlcv, coin, interval="minute60", count=200)
+        df = retry_request(pyupbit.get_ohlcv, coin, interval="minute240", count=200)
         vwma_5 = calculate_vwma(df['close'].values, df['volume'].values, 5) if df is not None else None
         vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20) if df is not None else None
         vwma_50 = calculate_vwma(df['close'].values, df['volume'].values, 50) if df is not None else None
