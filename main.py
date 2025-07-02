@@ -121,7 +121,7 @@ def calculate_trade_price(coins):
         total_trade_price = dict()
 
     for coin in coins:
-        querystring = {"market": coin, "count": 6}
+        querystring = {"market": coin, "count": 24}
         response = retry_request(requests.get, url, params=querystring)
         data = response.json()
 
