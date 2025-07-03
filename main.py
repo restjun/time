@@ -95,8 +95,8 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 5)
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 20)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -212,7 +212,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines.append("----------------------------------")
-    message_lines.append("매매-[시작]🅾️-🅾️-🅾️ / [되돌림]🅾️-✅️-✅️")
+    message_lines.append("매매-[1]🅾️-🅾️-🅾️ / [2]🅾️-🅾️-✅️")
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
