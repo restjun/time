@@ -212,7 +212,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines.append("----------------------------------")
-    message_lines.append("매매-[1] 🅾️-🅾️-🅾️ / [2] 🅾️-🅾️-✅️")
+    message_lines.append("매매-[매매] 추격하지마라. 🅾️✅️✅️")
     message_lines.append("매매-[기준] 5-20 매수 20-5 매도") 
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
