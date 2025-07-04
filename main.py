@@ -42,7 +42,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n비트-[2️⃣0️⃣▫️5️⃣0️⃣]{' 🟩 LONG ' if btc_status_1h else ' 🟥 SHORT'}\n{' 🟩 LONG 집중할시간 🟩' if btc_status_4h else ' 🟥 SHORT 나의 매매법은 비트하락추세에는 안통한다. 인정하자 🟥'}"
+            message_with_status = f"{message}\n비트-[2️⃣0️⃣▫️5️⃣0️⃣]{' 🟩 LONG ' if btc_status_1h else ' 🟥 SHORT'}\n\n{' 🟩 LONG 집중할시간 🟩' if btc_status_4h else ' 🟥 SHORT 나의 매매법은 비트하락추세에는 안통한다. 인정하자 🟥'}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
@@ -213,6 +213,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
 
     message_lines.append("----------------------------------")
     message_lines.append("매매-[1] 🅾️-🅾️-🅾️ / [2] 🅾️-🅾️-✅️")
+    message_lines.append("매매-[기준] 5-20 매수 20-5 매도") 
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message, btc_status_1h, btc_status_4h)
