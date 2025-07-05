@@ -110,7 +110,7 @@ def main():
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
 def calculate_trade_price(coins):
-    url = "https://api.upbit.com/v1/candles/minutes/10"
+    url = "https://api.upbit.com/v1/candles/minutes/1"
     total_trade_price = dict()
 
     # 한국 시간대 설정
@@ -121,7 +121,7 @@ def calculate_trade_price(coins):
         total_trade_price = dict()
 
     for coin in coins:
-        querystring = {"market": coin, "count": 144}
+        querystring = {"market": coin, "count": 60}
         response = retry_request(requests.get, url, params=querystring)
         data = response.json()
 
@@ -169,10 +169,10 @@ def calculate_price_change_percentage(coin):
 # 정배열 돌파 코인 메시지 전송
 def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage):
     golden_trade_price_result = calculate_trade_price(golden_cross_coins)
-    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 100}
+    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 10}
 
     if not golden_trade_price_result:
-        message = "🔴 현재 100억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
+        message = "🔴 현재 10억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
         send_telegram_message(message, btc_status_1h, btc_status_4h)
         return
 
