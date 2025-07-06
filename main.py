@@ -96,7 +96,7 @@ def find_golden_cross_coins(tickers, interval, count):
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
             vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 200)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 20)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -177,7 +177,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-    message_lines.append("🎯 50-200 ")
+    message_lines.append("🎯 50-20 ")
     message_lines.append("----------------------------------")
 
     idx = 1
@@ -185,7 +185,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         price_change = calculate_price_change_percentage(coin)
         
         # 상승 중인 코인만 전송 (+%)
-        if price_change is None or price_change <= 0:
+        if price_change is None or price_change <= 1:
             continue
 
         price_change_str = f"{price_change:+.2f}%"
