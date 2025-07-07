@@ -77,7 +77,7 @@ def check_bitcoin_status():
         btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
             btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
-            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 20)
+            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 200)
             btc_status_4h = 1 if btc_vwma_1_4h is not None and btc_vwma_2_4h is not None and btc_vwma_1_4h > btc_vwma_2_4h else 0
         else:
             logging.error("비트코인 4시간 데이터를 불러올 수 없습니다.")
@@ -96,7 +96,7 @@ def find_golden_cross_coins(tickers, interval, count):
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
             vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 200)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 20)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -177,7 +177,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-    message_lines.append("🎯 50-200 정배열 / 20-50 역배열 매수 ")
+    message_lines.append("🎯 50-20 역배열 ")
     message_lines.append("----------------------------------")
 
     idx = 1
