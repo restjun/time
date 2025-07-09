@@ -177,7 +177,7 @@ def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, 
         return
 
     message_lines = []
-    message_lines.append("🎯 1시간 기준 / 20-50 / 정배열 ")
+    message_lines.append("🎯 15분 / 20-50 / 역배열 ")
     message_lines.append("----------------------------------")
 
     idx = 1
