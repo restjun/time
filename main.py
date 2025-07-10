@@ -42,7 +42,7 @@ def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=Fal
     for retry_count in range(1, max_retries + 1):
         try:
             # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n비트-[2️⃣0️⃣▫️5️⃣0️⃣]{' 🟩 LONG ' if btc_status_1h else ' 🟥 SHORT'}\n\n{' 🟩 LONG 집중할시간 🟩' if btc_status_4h else ' 🟥 SHORT 지켜야 살수있다. 🟥'}"
+            message_with_status = f"{message}\n비트-[1️⃣▫️2️⃣]{' 🟩 LONG ' if btc_status_1h else ' 🟥 SHORT'}\n\n{' 🟩 LONG 집중할시간 🟩' if btc_status_4h else ' 🟥 SHORT 지켜야 살수있다. 🟥'}"
             if is_new_coin:
                 message_with_status += ""
             bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
@@ -68,16 +68,16 @@ def calculate_vwma(data, volume, period):
 # 비트코인 상태 확인 함수 업데이트
 def check_bitcoin_status():
     btc_ticker = "KRW-BTC"
-    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
+    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute1440", count=200)
     if btc_df is not None and len(btc_df) >= 200:
-        btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 20)
-        btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 50)
+        btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 1)
+        btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 2)
         btc_status_1h = 1 if btc_vwma_1 is not None and btc_vwma_2 is not None and btc_vwma_1 > btc_vwma_2 else 0
 
-        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
+        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute1440", count=200)
         if btc_df_4h is not None and len(btc_df_4h) >= 200:
-            btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 20)
-            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
+            btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 1)
+            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 2)
             btc_status_4h = 1 if btc_vwma_1_4h is not None and btc_vwma_2_4h is not None and btc_vwma_1_4h > btc_vwma_2_4h else 0
         else:
             logging.error("비트코인 4시간 데이터를 불러올 수 없습니다.")
@@ -95,8 +95,8 @@ def find_golden_cross_coins(tickers, interval, count):
     for ticker in tickers:
         df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
         if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 50)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 20)
+            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 1)
+            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 2)
             if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
                 golden_cross_coins.append(ticker)
 
@@ -105,7 +105,7 @@ def find_golden_cross_coins(tickers, interval, count):
 # 메인 함수
 def main():
     btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute15", count=200)
+    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute1440", count=200)
     send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
 
 # 거래대금을 계산하는 함수 (상위 10개 코인만)
@@ -169,10 +169,10 @@ def calculate_price_change_percentage(coin):
 # 정배열 돌파 코인 메시지 전송
 def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage):
     golden_trade_price_result = calculate_trade_price(golden_cross_coins)
-    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 10}
+    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 1000}
 
     if not golden_trade_price_result:
-        message = "🔴 현재 10억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
+        message = "🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
         send_telegram_message(message, btc_status_1h, btc_status_4h)
         return
 
