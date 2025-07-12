@@ -7,16 +7,14 @@ import requests
 import threading
 import uvicorn
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
 import pytz
 
 app = FastAPI()
 
-# 텔레그램 봇 토큰과 사용자 ID 설정
 telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
 telegram_user_id = 6596886700
-
 bot = telepot.Bot(telegram_bot_token)
 
 # 업비트 로그인 계정2 2026.05.31 만료
@@ -24,216 +22,186 @@ access = "QBJxf9YKWDotc63BFbBg2lkwZ9FHpgoBu3vzjeoS"
 secret = "MZqMcGFaZkj7CarqgtIxyoxDcX1xUDB80BAljbWk"
 upbit = pyupbit.Upbit(access, secret)
 
-# KRW로 거래되는 모든 코인 조회
-krw_tickers = pyupbit.get_tickers(fiat="KRW")
-
-# 이전에 발송한 코인 목록 및 거래대금 초기화
-previous_sent_coins = []
-previous_trade_prices = {}
-
-# 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
 
-# 메시지 전송 함수
-def send_telegram_message(message, btc_status_1h, btc_status_4h, is_new_coin=False, btc_price_change_percentage=0.0):
-    max_retries = 3
-    retry_delay = 5  # 재시도 간격 (초)
-
+def send_telegram_message(message):
+    max_retries = 10
+    retry_delay = 5
     for retry_count in range(1, max_retries + 1):
         try:
-            # 메시지와 BTC 상태를 함께 보내기
-            message_with_status = f"{message}\n비트-[1️⃣▫️2️⃣]{' 🟩 LONG ' if btc_status_1h else ' 🟥 SHORT'}\n\n{' 🟩 LONG 집중할시간 🟩' if btc_status_4h else ' 🟥 SHORT 지켜야 살수있다. 🟥'}"
-            if is_new_coin:
-                message_with_status += ""
-            bot.sendMessage(chat_id=telegram_user_id, text=message_with_status)
-            logging.info("텔레그램 메시지 전송 성공: %s", message_with_status)
-            return  # 메시지 전송 성공 시 함수 종료
+            bot.sendMessage(chat_id=telegram_user_id, text=message)
+            logging.info("텔레그램 메시지 전송 성공: %s", message)
+            return
         except Exception as e:
             logging.error("텔레그램 메시지 전송 실패 (재시도 %d/%d): %s", retry_count, max_retries, str(e))
             time.sleep(retry_delay)
-
     logging.error("텔레그램 메시지 전송 실패: 최대 재시도 횟수 초과")
 
-# 거래량 가중 이동평균선(VWMA) 계산 함수
-def calculate_vwma(data, volume, period):
-    if len(data) < period:
-        return None  # 데이터가 충분하지 않으면 None 반환
-    weighted_price = data[-period:] * volume[-period:]
-    total_volume = volume[-period:].sum()
-    
-    if total_volume == 0:
-        return None  # 거래량이 0이면 계산 불가
-    return weighted_price.sum() / total_volume  # VWMA 계산
-
-# 비트코인 상태 확인 함수 업데이트
-def check_bitcoin_status():
-    btc_ticker = "KRW-BTC"
-    btc_df = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
-    if btc_df is not None and len(btc_df) >= 200:
-        btc_vwma_1 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 20)
-        btc_vwma_2 = calculate_vwma(btc_df['close'].values, btc_df['volume'].values, 50)
-        btc_status_1h = 1 if btc_vwma_1 is not None and btc_vwma_2 is not None and btc_vwma_1 > btc_vwma_2 else 0
-
-        btc_df_4h = retry_request(pyupbit.get_ohlcv, btc_ticker, interval="minute15", count=200)
-        if btc_df_4h is not None and len(btc_df_4h) >= 200:
-            btc_vwma_1_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 20)
-            btc_vwma_2_4h = calculate_vwma(btc_df_4h['close'].values, btc_df_4h['volume'].values, 50)
-            btc_status_4h = 1 if btc_vwma_1_4h is not None and btc_vwma_2_4h is not None and btc_vwma_1_4h > btc_vwma_2_4h else 0
-        else:
-            logging.error("비트코인 4시간 데이터를 불러올 수 없습니다.")
-            btc_status_4h = None
-
-        return btc_status_1h, btc_status_4h
-    else:
-        logging.error("비트코인 데이터를 불러올 수 없습니다.")
-        return None, None
-
-# 정배열 돌파 코인 확인 함수 (캔들 수 부족해도 최소 2개 이상 있으면 분석)
-def find_golden_cross_coins(tickers, interval, count):
-    golden_cross_coins = []
-
-    for ticker in tickers:
-        df = retry_request(pyupbit.get_ohlcv, ticker, interval=interval, count=count)
-        if df is not None and len(df) >= 2:
-            vwma_1 = calculate_vwma(df['close'].values, df['volume'].values, 20)
-            vwma_2 = calculate_vwma(df['close'].values, df['volume'].values, 50)
-            if vwma_1 is not None and vwma_2 is not None and vwma_1 > vwma_2:
-                golden_cross_coins.append(ticker)
-
-    return golden_cross_coins
-
-# 메인 함수
-def main():
-    btc_status_1h, btc_status_4h = check_bitcoin_status()
-    golden_cross_coins = find_golden_cross_coins(krw_tickers, interval="minute15", count=200)
-    send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage=0.0)
-
-# 거래대금을 계산하는 함수 (상위 10개 코인만)
-def calculate_trade_price(coins):
-    url = "https://api.upbit.com/v1/candles/minutes/10"
-    total_trade_price = dict()
-
-    # 한국 시간대 설정
-    kr_tz = pytz.timezone('Asia/Seoul')
-    now = datetime.now(kr_tz)
-
-    if now.hour >= 9:
-        total_trade_price = dict()
-
-    for coin in coins:
-        querystring = {"market": coin, "count": 144}
-        response = retry_request(requests.get, url, params=querystring)
-        data = response.json()
-
-        try:
-            trade_volume = sum([candle['candle_acc_trade_volume'] for candle in data])
-            trade_price = float(data[0]["trade_price"]) * trade_volume
-            trade_price_billion = trade_price / 100000000
-
-            if trade_price_billion >= 100000:
-                total_trade_price[coin] = round(trade_price_billion / 100000)
-            else:
-                total_trade_price[coin] = round(trade_price_billion)
-
-            time.sleep(0.2)
-        except Exception as e:
-            logging.error("Error processing data for coin: %s", coin)
-            logging.error(str(e))
-            
-    time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
-
-# 가격 변동률을 계산하는 함수 (캔들 수가 2개 이상이면 진행)
-def calculate_price_change_percentage(coin):
-    time.sleep(0.2)
-    ohlcv_data = retry_request(pyupbit.get_ohlcv, coin, interval="day", count=2)
-
-    if ohlcv_data is not None and len(ohlcv_data) >= 2:
-        current_close_price = ohlcv_data['close'][-1]
-        previous_close_price = ohlcv_data['close'][-2]
-        
-        try:
-            if previous_close_price != 0:
-                change_percentage = ((current_close_price - previous_close_price) / previous_close_price) * 100
-                return change_percentage
-            else:
-                logging.error("이전 종가가 0입니다: %s", coin)
-                return None
-        except Exception as e:
-            logging.error("가격 변동률 계산 에러 (%s): %s", coin, str(e))
-            return None
-    else:
-        logging.error("캔들 데이터 부족으로 가격 변동률 계산 실패: %s", coin)
-        return None
-
-# 정배열 돌파 코인 메시지 전송
-def send_golden_cross_message(golden_cross_coins, btc_status_1h, btc_status_4h, btc_price_change_percentage):
-    golden_trade_price_result = calculate_trade_price(golden_cross_coins)
-    golden_trade_price_result = {coin: trade_price for coin, trade_price in golden_trade_price_result.items() if trade_price >= 1000}
-
-    if not golden_trade_price_result:
-        message = "🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료."
-        send_telegram_message(message, btc_status_1h, btc_status_4h)
-        return
-
-    message_lines = []
-    message_lines.append("🎯 15분 / 20-50 ")
-    message_lines.append("----------------------------------")
-
-    idx = 1
-    for coin, trade_price in sorted(golden_trade_price_result.items(), key=lambda x: x[1], reverse=True):
-        price_change = calculate_price_change_percentage(coin)
-        
-        # 상승 중인 코인만 전송 (+%)
-        if price_change is None or price_change <= 0:
-            continue
-
-        price_change_str = f"{price_change:+.2f}%"
-
-        # VWMA 상태 계산
-        df = retry_request(pyupbit.get_ohlcv, coin, interval="minute15", count=200)
-        vwma_5 = calculate_vwma(df['close'].values, df['volume'].values, 5) if df is not None else None
-        vwma_20 = calculate_vwma(df['close'].values, df['volume'].values, 20) if df is not None else None
-        vwma_50 = calculate_vwma(df['close'].values, df['volume'].values, 50) if df is not None else None
-        vwma_200 = calculate_vwma(df['close'].values, df['volume'].values, 200) if df is not None else None
-
-        five_twenty = " ✅️" if vwma_5 is not None and vwma_20 is not None and vwma_5 > vwma_20 else " 🅾️"
-        twenty_fifty = "✅️" if vwma_20 is not None and vwma_50 is not None and vwma_20 > vwma_50 else "🅾️"
-        fifty_two_hundred = "✅️" if vwma_50 is not None and vwma_200 is not None and vwma_50 > vwma_200 else "🅾️"
-
-        message_lines.append(
-            f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
-        idx += 1
-
-    # 상승 중인 코인이 없다면 메시지 전송하지 않음
-    if idx == 1:
-        message = "🟢 현재 준비중인 코인이 없습니다. \n🟢 업비트 상태 확인 완료. \n"
-        send_telegram_message(message, btc_status_1h, btc_status_4h)
-        return
-
-    message_lines.append("----------------------------------")
-    message_lines.append("매매-[매매] 추격하지마라. 🅾️🅾️✅️")
-    message_lines.append("매매-[원칙] 첫번째 5-20 정배열 매수") 
-    message_lines.append("----------------------------------")
-    final_message = "\n".join(message_lines)
-    send_telegram_message(final_message, btc_status_1h, btc_status_4h)
-
-
-# 재시도 로직이 포함된 API 호출 래퍼
 def retry_request(func, *args, **kwargs):
-    max_retries = 3
+    max_retries = 10
     retry_delay = 5
     for attempt in range(max_retries):
         try:
             result = func(*args, **kwargs)
-            if result is not None:
-                return result
+            if hasattr(result, 'status_code') and result.status_code == 429:
+                logging.warning("⚠️ 429 Too Many Requests - 대기 후 재시도")
+                time.sleep(1)
+                continue
+            return result
         except Exception as e:
-            logging.error(f"API 호출 실패, 재시도 {attempt+1}/{max_retries}: {str(e)}")
+            logging.error(f"API 호출 실패 (재시도 {attempt+1}/{max_retries}): {str(e)}")
             time.sleep(retry_delay)
     return None
 
-# 스케줄러 설정
+def calculate_ewma(data, period):
+    if len(data) < period:
+        return None
+    series = pd.Series(data)
+    ewma = series.ewm(span=period, adjust=False).mean()
+    return ewma.iloc[-1]
+
+def get_okx_perpetual_symbols():
+    try:
+        url = "https://www.okx.com/api/v5/public/instruments?instType=SWAP"
+        response = retry_request(requests.get, url)
+        if response is None:
+            return []
+        data = response.json()
+        usdt_pairs = [
+            item['instId'].replace("-USDT-SWAP", "") 
+            for item in data.get('data', []) 
+            if item.get('instId', "").endswith("-USDT-SWAP")
+        ]
+        return usdt_pairs
+    except Exception as e:
+        logging.error("OKX 선물 코인 조회 실패: %s", str(e))
+        return []
+
+def get_common_upbit_okx_tickers():
+    okx_symbols = get_okx_perpetual_symbols()
+    upbit_krw_tickers = pyupbit.get_tickers(fiat="KRW")
+    matched = []
+    for ticker in upbit_krw_tickers:
+        symbol = ticker.replace("KRW-", "")
+        if symbol in okx_symbols:
+            matched.append(ticker)
+    return matched
+
+def calculate_trade_price(coins):
+    url = "https://api.upbit.com/v1/candles/minutes/10"
+    total_trade_price = {}
+    for coin in coins:
+        querystring = {"market": coin, "count": 145}
+        response = retry_request(requests.get, url, params=querystring)
+        if response is None:
+            continue
+        try:
+            data = response.json()
+            if not data:
+                continue
+            trade_volume = sum([candle.get('candle_acc_trade_volume', 0) for candle in data])
+            current_price = data[0].get("trade_price", None)
+            if current_price is None:
+                continue
+            trade_price = float(current_price) * trade_volume
+            trade_price_billion = trade_price / 100000000
+            total_trade_price[coin] = round(trade_price_billion)
+        except Exception as e:
+            logging.error("거래대금 계산 실패 (%s): %s", coin, str(e))
+        time.sleep(0.1)
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
+
+def calculate_price_change_percentage(coin):
+    for _ in range(10):
+        try:
+            ohlcv_data = pyupbit.get_ohlcv(coin, interval="day", count=2)
+            if ohlcv_data is not None and len(ohlcv_data) >= 2:
+                current_close_price = ohlcv_data['close'][-1]
+                previous_close_price = ohlcv_data['close'][-2]
+                if previous_close_price != 0:
+                    return ((current_close_price - previous_close_price) / previous_close_price) * 100
+        except Exception as e:
+            logging.error("가격 변동률 계산 에러 (%s): %s", coin, str(e))
+        time.sleep(1)
+    return None
+
+def get_ohlcv_with_retry(coin, interval, count):
+    for _ in range(10):
+        try:
+            df = pyupbit.get_ohlcv(coin, interval=interval, count=count)
+            if df is not None and not df.empty:
+                return df
+        except Exception as e:
+            logging.error("OHLCV 데이터 요청 실패 (%s): %s", coin, str(e))
+        time.sleep(1)
+    return None
+
+def get_ewma_with_retry(data, period):
+    for _ in range(5):
+        result = calculate_ewma(data, period)
+        if result is not None:
+            return result
+        time.sleep(0.5)
+    return None
+
+def send_filtered_top_volume_message(top_volume_coins):
+    if not top_volume_coins:
+        send_telegram_message("🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
+        return
+
+    message_lines = []
+    message_lines.append("🎯 15분 기준 EMA 거래대금 상위 종목")
+    message_lines.append("----------------------------------")
+
+    idx = 1
+    for coin, trade_price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True):
+        price_change = calculate_price_change_percentage(coin)
+        if price_change is None or price_change <= -100:
+            continue
+
+        price_change_str = f"{price_change:+.2f}%" if price_change is not None else "❌ 실패"
+
+        df = get_ohlcv_with_retry(coin, interval="minute15", count=200)
+        if df is None:
+            continue
+
+        try:
+            ewma_5 = get_ewma_with_retry(df['close'].values, 5)
+            ewma_20 = get_ewma_with_retry(df['close'].values, 20)
+            ewma_50 = get_ewma_with_retry(df['close'].values, 50)
+            ewma_200 = get_ewma_with_retry(df['close'].values, 200)
+
+            if None in [ewma_5, ewma_20, ewma_50, ewma_200]:
+                continue
+
+            five_twenty = " ✅️" if ewma_5 > ewma_20 else " 🅾️"
+            twenty_fifty = "✅️" if ewma_20 > ewma_50 else "🅾️"
+            fifty_two_hundred = "✅️" if ewma_50 > ewma_200 else "🅾️"
+
+            message_lines.append(f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
+            idx += 1
+        except Exception as e:
+            logging.error("EWMA 계산 실패 (%s): %s", coin, str(e))
+        time.sleep(0.5)
+
+    if idx == 1:
+        send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
+        return
+
+    message_lines.append("----------------------------------")
+    message_lines.append("매매-[확인] 추격하지마라. 🅾️✅️✅️➖️✅️✅️✅️")
+    message_lines.append("매매-[확인] 추격하지마라. 🅾️🅾️✅️➖️✅️🅾️✅️")
+    message_lines.append("매매-[원칙] 첫번째 역배열 돌파시만 도전")
+    message_lines.append("----------------------------------")
+    final_message = "\n".join(message_lines)
+    send_telegram_message(final_message)
+
+def main():
+    filtered_tickers = get_common_upbit_okx_tickers()
+    top_volume_coins = calculate_trade_price(filtered_tickers)
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 10}
+    send_filtered_top_volume_message(filtered_coins)
+
 schedule.every(1).minutes.do(main)
 
 def run_scheduler():
@@ -246,5 +214,3 @@ scheduler_thread.start()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
