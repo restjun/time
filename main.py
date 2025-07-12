@@ -180,7 +180,7 @@ def send_filtered_top_volume_message(top_volume_coins):
             twenty_fifty = "✅️" if vwma_20 > vwma_50 else "🅾️"
             fifty_two_hundred = "✅️" if vwma_50 > vwma_200 else "🅾️"
 
-            message_lines.append(f"{idx}.{five_twenty}-{twenty_fifty}{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
+            message_lines.append(f"{idx}.{five_twenty}{twenty_fifty}{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
             idx += 1
         except Exception as e:
             logging.error("VWMA 계산 실패 (%s): %s", coin, str(e))
