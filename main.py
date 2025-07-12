@@ -149,7 +149,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines = []
-    message_lines.append("🎯 OKX 15분 기준 VWMA 거래대금 상위 종목")
+    message_lines.append("🎯 거래대금 + VWMA 15분")
     message_lines.append("----------------------------------")
 
     idx = 1
