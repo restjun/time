@@ -7,9 +7,7 @@ import requests
 import threading
 import uvicorn
 import logging
-from datetime import datetime
 import pandas as pd
-import pytz
 
 app = FastAPI()
 
@@ -53,12 +51,13 @@ def retry_request(func, *args, **kwargs):
             time.sleep(retry_delay)
     return None
 
-def calculate_ewma(data, period):
-    if len(data) < period:
+def calculate_vwma(close, volume, period):
+    if len(close) < period or len(volume) < period:
         return None
-    series = pd.Series(data)
-    ewma = series.ewm(span=period, adjust=False).mean()
-    return ewma.iloc[-1]
+    close_series = pd.Series(close)
+    volume_series = pd.Series(volume)
+    vwma = (close_series[-period:] * volume_series[-period:]).sum() / volume_series[-period:].sum()
+    return vwma
 
 def get_okx_perpetual_symbols():
     try:
@@ -136,9 +135,9 @@ def get_ohlcv_with_retry(coin, interval, count):
         time.sleep(1)
     return None
 
-def get_ewma_with_retry(data, period):
+def get_vwma_with_retry(close, volume, period):
     for _ in range(5):
-        result = calculate_ewma(data, period)
+        result = calculate_vwma(close, volume, period)
         if result is not None:
             return result
         time.sleep(0.5)
@@ -150,7 +149,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines = []
-    message_lines.append("🎯 OKX 15분 기준 EMA 거래대금 상위 종목")
+    message_lines.append("🎯 OKX 15분 기준 VWMA 거래대금 상위 종목")
     message_lines.append("----------------------------------")
 
     idx = 1
@@ -166,22 +165,25 @@ def send_filtered_top_volume_message(top_volume_coins):
             continue
 
         try:
-            ewma_5 = get_ewma_with_retry(df['close'].values, 5)
-            ewma_20 = get_ewma_with_retry(df['close'].values, 20)
-            ewma_50 = get_ewma_with_retry(df['close'].values, 50)
-            ewma_200 = get_ewma_with_retry(df['close'].values, 200)
+            close = df['close'].values
+            volume = df['volume'].values
 
-            if None in [ewma_5, ewma_20, ewma_50, ewma_200]:
+            vwma_5 = get_vwma_with_retry(close, volume, 5)
+            vwma_20 = get_vwma_with_retry(close, volume, 20)
+            vwma_50 = get_vwma_with_retry(close, volume, 50)
+            vwma_200 = get_vwma_with_retry(close, volume, 200)
+
+            if None in [vwma_5, vwma_20, vwma_50, vwma_200]:
                 continue
 
-            five_twenty = " ✅️" if ewma_5 > ewma_20 else " 🅾️"
-            twenty_fifty = "✅️" if ewma_20 > ewma_50 else "🅾️"
-            fifty_two_hundred = "✅️" if ewma_50 > ewma_200 else "🅾️"
+            five_twenty = " ✅️" if vwma_5 > vwma_20 else " 🅾️"
+            twenty_fifty = "✅️" if vwma_20 > vwma_50 else "🅾️"
+            fifty_two_hundred = "✅️" if vwma_50 > vwma_200 else "🅾️"
 
             message_lines.append(f"{idx}.{five_twenty}-{twenty_fifty}-{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
             idx += 1
         except Exception as e:
-            logging.error("EWMA 계산 실패 (%s): %s", coin, str(e))
+            logging.error("VWMA 계산 실패 (%s): %s", coin, str(e))
         time.sleep(0.5)
 
     if idx == 1:
