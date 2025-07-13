@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+ㆍfrom fastapi import FastAPI
 import pyupbit
 import telepot
 import schedule
@@ -108,7 +108,7 @@ def calculate_trade_price(coins):
         except Exception as e:
             logging.error("거래대금 계산 실패 (%s): %s", coin, str(e))
         time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:20])
 
 def calculate_price_change_percentage(coin):
     for _ in range(10):
