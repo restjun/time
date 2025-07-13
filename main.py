@@ -1,4 +1,4 @@
-ㆍfrom fastapi import FastAPI
+from fastapi import FastAPI
 import pyupbit
 import telepot
 import schedule
