@@ -145,7 +145,7 @@ def get_vwma_with_retry(close, volume, period):
 
 def send_filtered_top_volume_message(top_volume_coins):
     if not top_volume_coins:
-        send_telegram_message("🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
+        send_telegram_message("🔴 현재 500억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
         return
 
     message_lines = []
@@ -194,7 +194,7 @@ def send_filtered_top_volume_message(top_volume_coins):
     message_lines.append("매매-[원칙1] 추격하지마라. 🟥[🅾️]🟩")
     message_lines.append("매매-[원칙2] 첫번째 돌파매수")
     message_lines.append("매매-[원칙3] 첫번째 무조건 반익절")
-    message_lines.append("매매-[원칙4] 거래대금 1000억 이상")
+    message_lines.append("매매-[원칙4] 거래대금 500억 이상")
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
@@ -202,7 +202,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 def main():
     filtered_tickers = get_common_upbit_okx_tickers()
     top_volume_coins = calculate_trade_price(filtered_tickers)
-    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1000}
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 500}
     send_filtered_top_volume_message(filtered_coins)
 
 schedule.every(1).minutes.do(main)
