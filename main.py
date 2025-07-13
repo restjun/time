@@ -108,7 +108,7 @@ def calculate_trade_price(coins):
         except Exception as e:
             logging.error("거래대금 계산 실패 (%s): %s", coin, str(e))
         time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:100])
 
 def calculate_price_change_percentage(coin):
     for _ in range(10):
@@ -201,7 +201,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 def main():
     filtered_tickers = get_common_upbit_okx_tickers()
     top_volume_coins = calculate_trade_price(filtered_tickers)
-    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 10}
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1000}
     send_filtered_top_volume_message(filtered_coins)
 
 schedule.every(1).minutes.do(main)
