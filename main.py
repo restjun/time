@@ -155,7 +155,7 @@ def send_filtered_top_volume_message(top_volume_coins):
     idx = 1
     for coin, trade_price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True):
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= 0:
+        if price_change is None or price_change <= -100:
             continue
 
         price_change_str = f"{price_change:+.2f}%" if price_change is not None else "❌ 실패"
@@ -194,6 +194,7 @@ def send_filtered_top_volume_message(top_volume_coins):
     message_lines.append("매매-[원칙1] 추격하지마라. [🅾️]🟩🟩")
     message_lines.append("매매-[원칙2] 첫번째 돌파매수")
     message_lines.append("매매-[원칙3] 첫번째 무조건 반익절")
+    message_lines.append("매매-[원칙4] 거래대금 1000억 이상")
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
