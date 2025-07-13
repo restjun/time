@@ -155,7 +155,7 @@ def send_filtered_top_volume_message(top_volume_coins):
     idx = 1
     for coin, trade_price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True):
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= -100:
+        if price_change is None or price_change <= 0:
             continue
 
         price_change_str = f"{price_change:+.2f}%" if price_change is not None else "❌ 실패"
