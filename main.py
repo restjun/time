@@ -191,8 +191,9 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines.append("----------------------------------")
-    message_lines.append("매매-[확인] 추격하지마라. [🅾️]🟩🟩")
-    message_lines.append("매매-[원칙] 첫번째 역배열 돌파시만 도전")
+    message_lines.append("매매-[원칙1] 추격하지마라. [🅾️]🟩🟩")
+    message_lines.append("매매-[원칙2] 첫번째 돌파매수")
+    message_lines.append("매매-[원칙3] 첫번째 무조건 반익절")
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
