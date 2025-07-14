@@ -176,9 +176,9 @@ def send_filtered_top_volume_message(top_volume_coins):
             if None in [vwma_10, vwma_20, vwma_50, vwma_200]:
                 continue
 
-            five_twenty = " 🟩" if vwma_10 > vwma_20 else " 🟥"
+            five_twenty = " ✅️" if vwma_10 > vwma_20 else " 🟥"
             twenty_fifty = "🟩" if vwma_20 > vwma_50 else "[🅾️]"
-            fifty_two_hundred = "🟩" if vwma_50 > vwma_200 else "🟥"
+            fifty_two_hundred = "✅️" if vwma_50 > vwma_200 else "🟥"
 
             message_lines.append(f"{idx}.{five_twenty}{twenty_fifty}{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
             idx += 1
@@ -191,7 +191,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines.append("----------------------------------")
-    message_lines.append("매매-[원칙1] 추격금지. 🟩[🅾️]🟩")
+    message_lines.append("매매-[원칙1] 추격금지. ✅️[🅾️]✅️")
     message_lines.append("매매-[원칙2] 분할매수")
     message_lines.append("매매-[원칙3] 무조건 반익절")
     message_lines.append("매매-[원칙4] 거래대금 1000억 이상")
