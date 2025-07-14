@@ -108,7 +108,7 @@ def calculate_trade_price(coins):
         except Exception as e:
             logging.error("거래대금 계산 실패 (%s): %s", coin, str(e))
         time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:20])
 
 def calculate_price_change_percentage(coin):
     for _ in range(10):
@@ -117,7 +117,7 @@ def calculate_price_change_percentage(coin):
             if ohlcv_data is not None and len(ohlcv_data) >= 2:
                 current_close_price = ohlcv_data['close'][-1]
                 previous_close_price = ohlcv_data['close'][-2]
-                if previous_close_price != -100:
+                if previous_close_price != 0:
                     return ((current_close_price - previous_close_price) / previous_close_price) * 100
         except Exception as e:
             logging.error("가격 변동률 계산 에러 (%s): %s", coin, str(e))
