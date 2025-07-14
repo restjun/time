@@ -194,7 +194,7 @@ def send_filtered_top_volume_message(top_volume_coins):
     message_lines.append("매매-[원칙1] 추격금지. 🟩[🅾️]🟩")
     message_lines.append("매매-[원칙2] 분할매수")
     message_lines.append("매매-[원칙3] 무조건 반익절")
-    message_lines.append("매매-[원칙4] 거래대금 500억 이상")
+    message_lines.append("매매-[원칙4] 거래대금 1000억 이상")
     message_lines.append("----------------------------------")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
