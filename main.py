@@ -117,7 +117,7 @@ def calculate_price_change_percentage(coin):
             if ohlcv_data is not None and len(ohlcv_data) >= 2:
                 current_close_price = ohlcv_data['close'][-1]
                 previous_close_price = ohlcv_data['close'][-2]
-                if previous_close_price != 0:
+                if previous_close_price != -100:
                     return ((current_close_price - previous_close_price) / previous_close_price) * 100
         except Exception as e:
             logging.error("가격 변동률 계산 에러 (%s): %s", coin, str(e))
@@ -145,7 +145,7 @@ def get_vwma_with_retry(close, volume, period):
 
 def send_filtered_top_volume_message(top_volume_coins):
     if not top_volume_coins:
-        send_telegram_message("🔴 현재 500억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
+        send_telegram_message("🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
         return
 
     message_lines = []
@@ -202,7 +202,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 def main():
     filtered_tickers = get_common_upbit_okx_tickers()
     top_volume_coins = calculate_trade_price(filtered_tickers)
-    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 500}
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1000}
     send_filtered_top_volume_message(filtered_coins)
 
 schedule.every(1).minutes.do(main)
