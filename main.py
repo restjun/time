@@ -149,7 +149,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines = []
-    message_lines.append("🎯 거래대금 + VWMA 15분")
+    message_lines.append("🎯 업비트 거래대금 상위 10 헌물 코인 분석")
     message_lines.append("----------------------------------")
 
     idx = 1
