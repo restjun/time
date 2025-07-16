@@ -160,7 +160,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 
         price_change_str = f"{price_change:+.2f}%" if price_change is not None else "❌ 실패"
 
-        df = get_ohlcv_with_retry(coin, interval="minute60", count=200)
+        df = get_ohlcv_with_retry(coin, interval="minute15", count=200)
         if df is None:
             continue
 
