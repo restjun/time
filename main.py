@@ -188,10 +188,14 @@ def send_filtered_top_volume_message(top_volume_coins):
             f20 = "✅" if vwma_10 > vwma_20 else "🟥"
             t50 = "✅️" if vwma_10 > vwma_50 else "🟥"
             f200 = "✅" if vwma_50 > vwma_200 else "🟥"
-            tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
+
+            rocket = ""
+            if tf_label == "15m" and vwma_10 < vwma_50:
+                rocket = " 🚀"
+
+            tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
         return tf_results
 
-    # 비트코인 정보 포함
     btc_ticker = "KRW-BTC"
     btc_trade_price = top_volume_coins.get(btc_ticker, None)
     btc_price_change = calculate_price_change_percentage(btc_ticker)
@@ -202,7 +206,6 @@ def send_filtered_top_volume_message(top_volume_coins):
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("──────────────────")
 
-    # 상위 3개 코인 필터링
     filtered_items = [(coin, price) for coin, price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True)
                       if coin != btc_ticker]
 
