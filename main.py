@@ -186,7 +186,7 @@ def send_filtered_top_volume_message(top_volume_coins):
                 continue
 
             f20 = "✅" if vwma_10 > vwma_20 else "🟥"
-            t50 = "✅️" if vwma_20 > vwma_50 else "🟥"
+            t50 = "✅️" if vwma_10 > vwma_50 else "🟥"
             f200 = "✅" if vwma_50 > vwma_200 else "🟥"
             tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
         return tf_results
