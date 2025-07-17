@@ -200,16 +200,19 @@ def send_filtered_top_volume_message(top_volume_coins):
                       if coin != btc_ticker]
 
     idx = 1
-    for coin, trade_price in filtered_items[:3]:
-        price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= 0:
-            continue
+    for coin, trade_price in filtered_items:
+    price_change = calculate_price_change_percentage(coin)
+    if price_change is None or price_change <= 0:
+        continue
 
-        message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {trade_price}억 | 📈 {price_change:+.2f}%")
-        for tf_result in get_vwma_status(coin):
-            message_lines.append(f"    └ {tf_result}")
-        message_lines.append("──────────────────")
-        idx += 1
+    message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {trade_price}억 | 📈 {price_change:+.2f}%")
+    for tf_result in get_vwma_status(coin):
+        message_lines.append(f"    └ {tf_result}")
+    message_lines.append("──────────────────")
+    
+    idx += 1
+    if idx > 3:
+        break
 
     if idx == 1 and btc_price_change is None:
         send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
