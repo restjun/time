@@ -152,9 +152,9 @@ def send_filtered_top_volume_message(top_volume_coins):
     message_lines.append("━━━━━━━━━━━━━━━━━━━━━━")
 
     timeframes = {
-        "  1D": "day",
-        "  4h": "minute240",
-        "  1h": "minute60",
+        "1D": "day",
+        "4h": "minute240",
+        "1h": "minute60",
         "15m": "minute15"
     }
 
