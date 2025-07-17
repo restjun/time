@@ -199,7 +199,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {trade_price}억 | 📈 {price_change_str}")
         for tf_result in all_tf_results:
             message_lines.append(f"    └ {tf_result}")
-        message_lines.append("📉─────────────────")
+        message_lines.append("──────────────────")
         idx += 1
 
     if idx == 1:
