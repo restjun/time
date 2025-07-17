@@ -19,7 +19,7 @@ access = "QBJxf9YKWDotc63BFbBg2lkwZ9FHpgoBu3vzjeoS"
 secret = "MZqMcGFaZkj7CarqgtIxyoxDcX1xUDB80BAljbWk"
 upbit = pyupbit.Upbit(access, secret)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 def send_telegram_message(message):
     max_retries = 10
@@ -184,7 +184,7 @@ def send_filtered_top_volume_message(top_volume_coins):
             tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
         return tf_results
 
-    # 비트코인 정보 항상 포함
+    # 비트코인 정보 포함
     btc_ticker = "KRW-BTC"
     btc_trade_price = top_volume_coins.get(btc_ticker, None)
     btc_price_change = calculate_price_change_percentage(btc_ticker)
@@ -195,26 +195,26 @@ def send_filtered_top_volume_message(top_volume_coins):
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("──────────────────")
 
-    # BTC 제외하고 상위 3개만
+    # 상위 3개 코인 필터링
     filtered_items = [(coin, price) for coin, price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True)
                       if coin != btc_ticker]
 
     idx = 1
     for coin, trade_price in filtered_items:
-    price_change = calculate_price_change_percentage(coin)
-    if price_change is None or price_change <= 0:
-        continue
+        price_change = calculate_price_change_percentage(coin)
+        if price_change is None or price_change <= 0:
+            continue
 
-    message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {trade_price}억 | 📈 {price_change:+.2f}%")
-    for tf_result in get_vwma_status(coin):
-        message_lines.append(f"    └ {tf_result}")
-    message_lines.append("──────────────────")
-    
-    idx += 1
-    if idx > 3:
-        break
+        message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {trade_price}억 | 📈 {price_change:+.2f}%")
+        for tf_result in get_vwma_status(coin):
+            message_lines.append(f"    └ {tf_result}")
+        message_lines.append("──────────────────")
 
-    if idx == 1 and btc_price_change is None:
+        idx += 1
+        if idx > 3:
+            break
+
+    if idx == 1:
         send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
         return
 
@@ -227,18 +227,20 @@ def send_filtered_top_volume_message(top_volume_coins):
 def main():
     filtered_tickers = get_common_upbit_okx_tickers()
     top_volume_coins = calculate_trade_price(filtered_tickers)
-    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 500}
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1000}
     send_filtered_top_volume_message(filtered_coins)
 
-schedule.every(1).minutes.do(main)
+# FastAPI 실행과 스케줄러 병행
+@app.on_event("startup")
+def start_scheduler():
+    schedule.every(1).minutes.do(main)
+    threading.Thread(target=run_scheduler, daemon=True).start()
 
 def run_scheduler():
     while True:
         schedule.run_pending()
         time.sleep(1)
 
-scheduler_thread = threading.Thread(target=run_scheduler)
-scheduler_thread.start()
-
+# 서버 실행
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
