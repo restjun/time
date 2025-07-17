@@ -142,6 +142,13 @@ def get_vwma_with_retry(close, volume, period):
         time.sleep(0.5)
     return None
 
+def format_trade_price_billion(trade_price_billion):
+    if trade_price_billion >= 10000:
+        trillion = trade_price_billion // 10000
+        billion = trade_price_billion % 10000
+        return f"{trillion}조 {billion}억" if billion > 0 else f"{trillion}조"
+    return f"{trade_price_billion}억"
+
 def send_filtered_top_volume_message(top_volume_coins):
     if not top_volume_coins:
         send_telegram_message("🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
@@ -190,7 +197,7 @@ def send_filtered_top_volume_message(top_volume_coins):
     btc_price_change = calculate_price_change_percentage(btc_ticker)
 
     if btc_trade_price is not None and btc_price_change is not None:
-        message_lines.append(f"📊 BTC | 💰 {btc_trade_price}억 | 📈 {btc_price_change:+.2f}%")
+        message_lines.append(f"📊 BTC | 💰 {format_trade_price_billion(btc_trade_price)} | 📈 {btc_price_change:+.2f}%")
         for tf_result in get_vwma_status(btc_ticker):
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("──────────────────")
@@ -205,7 +212,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         if price_change is None or price_change <= 0:
             continue
 
-        message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {trade_price}억 | 📈 {price_change:+.2f}%")
+        message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
         for tf_result in get_vwma_status(coin):
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("──────────────────")
@@ -230,7 +237,6 @@ def main():
     filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1000}
     send_filtered_top_volume_message(filtered_coins)
 
-# FastAPI 실행과 스케줄러 병행
 @app.on_event("startup")
 def start_scheduler():
     schedule.every(1).minutes.do(main)
@@ -241,6 +247,5 @@ def run_scheduler():
         schedule.run_pending()
         time.sleep(1)
 
-# 서버 실행
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
