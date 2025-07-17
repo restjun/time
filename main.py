@@ -148,7 +148,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines = []
-    message_lines.append("🚀 *업비트 거래대금 TOP10 + VWMA 정배열 상태*")
+    message_lines.append("*업비트 거래대금 TOP10 + VWMA 정배열 *")
     message_lines.append("━━━━━━━━━━━━━━━━━━━━━━")
 
     timeframes = {
