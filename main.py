@@ -165,38 +165,36 @@ def send_filtered_top_volume_message(top_volume_coins):
         "15m": "minute15"
     }
 
-def get_vwma_status(coin):
-    tf_results = []
-    for tf_label, tf_api in timeframes.items():
-        df = get_ohlcv_with_retry(coin, interval=tf_api, count=200)
-        if df is None:
-            tf_results.append(f"{tf_label}: ❌")
-            continue
+    def get_vwma_status(coin):
+        tf_results = []
+        for tf_label, tf_api in timeframes.items():
+            df = get_ohlcv_with_retry(coin, interval=tf_api, count=200)
+            if df is None:
+                tf_results.append(f"{tf_label}: ❌")
+                continue
 
-        close = df['close'].values
-        volume = df['volume'].values
+            close = df['close'].values
+            volume = df['volume'].values
 
-        vwma_10 = get_vwma_with_retry(close, volume, 10)
-        vwma_20 = get_vwma_with_retry(close, volume, 20)
-        vwma_50 = get_vwma_with_retry(close, volume, 50)
-        vwma_200 = get_vwma_with_retry(close, volume, 200)
+            vwma_10 = get_vwma_with_retry(close, volume, 10)
+            vwma_20 = get_vwma_with_retry(close, volume, 20)
+            vwma_50 = get_vwma_with_retry(close, volume, 50)
+            vwma_200 = get_vwma_with_retry(close, volume, 200)
 
-        if None in [vwma_10, vwma_20, vwma_50, vwma_200]:
-            tf_results.append(f"{tf_label}: ❌")
-            continue
+            if None in [vwma_10, vwma_20, vwma_50, vwma_200]:
+                tf_results.append(f"{tf_label}: ❌")
+                continue
 
-        f20 = "✅" if vwma_10 > vwma_20 else "🟥"
-        t50 = "✅️" if vwma_10 > vwma_50 else "🟥"
-        f200 = "✅" if vwma_50 > vwma_200 else "🟥"
+            f20 = "✅" if vwma_10 > vwma_20 else "🟥"
+            t50 = "✅️" if vwma_10 > vwma_50 else "🟥"
+            f200 = "✅" if vwma_50 > vwma_200 else "🟥"
 
-        # ✅ 15분봉에서 10-50 역배열 & 50-200 정배열일 때만 🚀 표시
-        rocket = ""
-        if tf_label == "15m" and vwma_10 < vwma_50 and vwma_50 > vwma_200:
-            rocket = " 🚀"
+            rocket = ""
+            if tf_label == "15m" and vwma_10 < vwma_50:
+                rocket = " 🚀"
 
-        tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
-    return tf_results
-
+            tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
+        return tf_results
 
     btc_ticker = "KRW-BTC"
     btc_trade_price = top_volume_coins.get(btc_ticker, None)
