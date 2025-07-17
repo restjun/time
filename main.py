@@ -152,6 +152,13 @@ def send_filtered_top_volume_message(top_volume_coins):
     message_lines.append("🎯 업비트 거래대금 상위 10 분석")
     message_lines.append("----------------------------------")
 
+    timeframes = {
+        "15m": "minute15",
+        "1h": "minute60",
+        "4h": "minute240",
+        "1D": "day"
+    }
+
     idx = 1
     for coin, trade_price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True):
         price_change = calculate_price_change_percentage(coin)
@@ -160,31 +167,41 @@ def send_filtered_top_volume_message(top_volume_coins):
 
         price_change_str = f"{price_change:+.2f}%" if price_change is not None else "❌ 실패"
 
-        df = get_ohlcv_with_retry(coin, interval="minute15", count=200)
-        if df is None:
-            continue
+        all_tf_results = []
 
-        try:
-            close = df['close'].values
-            volume = df['volume'].values
-
-            vwma_10 = get_vwma_with_retry(close, volume, 10)
-            vwma_20 = get_vwma_with_retry(close, volume, 20)
-            vwma_50 = get_vwma_with_retry(close, volume, 50)
-            vwma_200 = get_vwma_with_retry(close, volume, 200)
-
-            if None in [vwma_10, vwma_20, vwma_50, vwma_200]:
+        for tf_label, tf_api in timeframes.items():
+            df = get_ohlcv_with_retry(coin, interval=tf_api, count=200)
+            if df is None:
+                all_tf_results.append(f"{tf_label}: ❌")
                 continue
 
-            five_twenty = " ✅️" if vwma_10 > vwma_20 else " 🟥"
-            twenty_fifty = "🟩" if vwma_20 > vwma_50 else "[🅾️]"
-            fifty_two_hundred = "✅️" if vwma_50 > vwma_200 else "🟥"
+            try:
+                close = df['close'].values
+                volume = df['volume'].values
 
-            message_lines.append(f"{idx}.{five_twenty}{twenty_fifty}{fifty_two_hundred}  {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
-            idx += 1
-        except Exception as e:
-            logging.error("VWMA 계산 실패 (%s): %s", coin, str(e))
-        time.sleep(0.5)
+                vwma_10 = get_vwma_with_retry(close, volume, 10)
+                vwma_20 = get_vwma_with_retry(close, volume, 20)
+                vwma_50 = get_vwma_with_retry(close, volume, 50)
+                vwma_200 = get_vwma_with_retry(close, volume, 200)
+
+                if None in [vwma_10, vwma_20, vwma_50, vwma_200]:
+                    all_tf_results.append(f"{tf_label}: ❌")
+                    continue
+
+                f20 = "✅" if vwma_10 > vwma_20 else "🟥"
+                t50 = "🟩" if vwma_20 > vwma_50 else "[🅾️]"
+                f200 = "✅" if vwma_50 > vwma_200 else "🟥"
+
+                all_tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
+            except Exception as e:
+                logging.error("VWMA 계산 실패 (%s %s): %s", coin, tf_label, str(e))
+                all_tf_results.append(f"{tf_label}: ❌")
+            time.sleep(0.3)
+
+        message_lines.append(f"{idx}. {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
+        for tf_result in all_tf_results:
+            message_lines.append(f"   - {tf_result}")
+        idx += 1
 
     if idx == 1:
         send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
