@@ -15,7 +15,6 @@ telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
 
-# 업비트 로그인 계정2 2026.05.31 만료
 access = "QBJxf9YKWDotc63BFbBg2lkwZ9FHpgoBu3vzjeoS"
 secret = "MZqMcGFaZkj7CarqgtIxyoxDcX1xUDB80BAljbWk"
 upbit = pyupbit.Upbit(access, secret)
@@ -149,14 +148,14 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines = []
-    message_lines.append("🎯 업비트 거래대금 상위 10 분석")
-    message_lines.append("----------------------------------")
+    message_lines.append("🚀 *업비트 거래대금 TOP10 + VWMA 정배열 상태*")
+    message_lines.append("━━━━━━━━━━━━━━━━━━━━━━")
 
     timeframes = {
-        "15m": "minute15",
-        "1h": "minute60",
+        "1D": "day",
         "4h": "minute240",
-        "1D": "day"
+        "1h": "minute60",
+        "15m": "minute15"
     }
 
     idx = 1
@@ -165,8 +164,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         if price_change is None or price_change <= 0:
             continue
 
-        price_change_str = f"{price_change:+.2f}%" if price_change is not None else "❌ 실패"
-
+        price_change_str = f"{price_change:+.2f}%"
         all_tf_results = []
 
         for tf_label, tf_api in timeframes.items():
@@ -198,21 +196,19 @@ def send_filtered_top_volume_message(top_volume_coins):
                 all_tf_results.append(f"{tf_label}: ❌")
             time.sleep(0.3)
 
-        message_lines.append(f"{idx}. {coin.replace('KRW-', '')} : {trade_price}억 ({price_change_str})")
+        message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {trade_price}억 | 📈 {price_change_str}")
         for tf_result in all_tf_results:
-            message_lines.append(f"   - {tf_result}")
+            message_lines.append(f"    └ {tf_result}")
+        message_lines.append("📉──────────────────────")
         idx += 1
 
     if idx == 1:
         send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
         return
 
-    message_lines.append("----------------------------------")
-    message_lines.append("매매-[원칙1] 추격금지. ✅️[🅾️]✅️")
-    message_lines.append("매매-[원칙2] 분할매수")
-    message_lines.append("매매-[원칙3] 무조건 반익절")
-    message_lines.append("매매-[원칙4] 거래대금 1000억 이상")
-    message_lines.append("----------------------------------")
+    message_lines.append("🧭 *매매 원칙*")
+    message_lines.append("✅ 추격매수 금지 / ✅ 분할매수 / ✅ 반드시 반익절 / ✅ 거래대금 1000억 이상")
+    message_lines.append("━━━━━━━━━━━━━━━━━━━━━━")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
 
