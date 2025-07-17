@@ -190,7 +190,7 @@ def send_filtered_top_volume_message(top_volume_coins):
             f200 = "✅" if vwma_50 > vwma_200 else "🟥"
 
             rocket = ""
-            if tf_label == "15m" and vwma_10 > vwma_20 and vwma_10 < vwma_50 and vwma_50 > vwma_200:
+            if tf_label == "15m" and vwma_10 < vwma_20 and vwma_10 < vwma_50 and vwma_50 > vwma_200:
                 rocket = " 🚀"
 
             tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
