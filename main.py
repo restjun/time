@@ -187,7 +187,7 @@ def send_filtered_top_volume_message(top_volume_coins):
                     continue
 
                 f20 = "✅" if vwma_10 > vwma_20 else "🟥"
-                t50 = "🟩" if vwma_20 > vwma_50 else "[🅾️]"
+                t50 = "✅️" if vwma_20 > vwma_50 else "🟥"
                 f200 = "✅" if vwma_50 > vwma_200 else "🟥"
 
                 all_tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
@@ -199,7 +199,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {trade_price}억 | 📈 {price_change_str}")
         for tf_result in all_tf_results:
             message_lines.append(f"    └ {tf_result}")
-        message_lines.append("📉──────────────────────")
+        message_lines.append("📉─────────────────")
         idx += 1
 
     if idx == 1:
@@ -208,7 +208,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 
     message_lines.append("🧭 *매매 원칙*")
     message_lines.append("✅ 추격매수 금지 / ✅ 분할매수 / ✅ 반드시 반익절 / ✅ 거래대금 1000억 이상")
-    message_lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+    message_lines.append("━━━━━━━━━━━━━━━━━━━━")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
 
