@@ -165,7 +165,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         "15m": "minute15"
     }
 
-   def get_vwma_status(coin):
+def get_vwma_status(coin):
     tf_results = []
     for tf_label, tf_api in timeframes.items():
         df = get_ohlcv_with_retry(coin, interval=tf_api, count=200)
