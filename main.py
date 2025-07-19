@@ -149,6 +149,44 @@ def format_trade_price_billion(trade_price_billion):
         return f"{trillion}조 {billion}억" if billion > 0 else f"{trillion}조"
     return f"{trade_price_billion}억"
 
+# ---------------------------- 이 부분만 수정 예정 -----------------------------
+def get_vwma_status(coin):
+    tf_results = []
+    for tf_label, tf_api in {
+        "1D": "day",
+        "4h": "minute240",
+        "1h": "minute60",
+        "15m": "minute15"
+    }.items():
+        df = get_ohlcv_with_retry(coin, interval=tf_api, count=200)
+        if df is None:
+            tf_results.append(f"{tf_label}: ❌")
+            continue
+
+        close = df['close'].values
+        volume = df['volume'].values
+
+        vwma_10 = get_vwma_with_retry(close, volume, 10)
+        vwma_20 = get_vwma_with_retry(close, volume, 20)
+        vwma_50 = get_vwma_with_retry(close, volume, 50)
+        vwma_200 = get_vwma_with_retry(close, volume, 200)
+
+        if None in [vwma_10, vwma_20, vwma_50, vwma_200]:
+            tf_results.append(f"{tf_label}: ❌")
+            continue
+
+        f20 = "✅" if vwma_10 > vwma_20 else "🟥"
+        t50 = "✅️" if vwma_10 > vwma_50 else "🟥"
+        f200 = "✅" if vwma_10 > vwma_200 else "🟥"
+
+        rocket = ""
+        if tf_label == "15m" and vwma_10 > vwma_20 and vwma_10 < vwma_50 and vwma_10 > vwma_200:
+            rocket = " 🚀"
+
+        tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
+    return tf_results
+# ----------------------------------------------------------------------
+
 def send_filtered_top_volume_message(top_volume_coins):
     if not top_volume_coins:
         send_telegram_message("🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
@@ -164,37 +202,6 @@ def send_filtered_top_volume_message(top_volume_coins):
         "1h": "minute60",
         "15m": "minute15"
     }
-
-    def get_vwma_status(coin):
-        tf_results = []
-        for tf_label, tf_api in timeframes.items():
-            df = get_ohlcv_with_retry(coin, interval=tf_api, count=200)
-            if df is None:
-                tf_results.append(f"{tf_label}: ❌")
-                continue
-
-            close = df['close'].values
-            volume = df['volume'].values
-
-            vwma_10 = get_vwma_with_retry(close, volume, 10)
-            vwma_20 = get_vwma_with_retry(close, volume, 20)
-            vwma_50 = get_vwma_with_retry(close, volume, 50)
-            vwma_200 = get_vwma_with_retry(close, volume, 200)
-
-            if None in [vwma_10, vwma_20, vwma_50, vwma_200]:
-                tf_results.append(f"{tf_label}: ❌")
-                continue
-
-            f20 = "✅" if vwma_10 > vwma_20 else "🟥"
-            t50 = "✅️" if vwma_10 > vwma_50 else "🟥"
-            f200 = "✅" if vwma_10 > vwma_200 else "🟥"
-
-            rocket = ""
-            if tf_label == "15m" and vwma_10 > vwma_20 and vwma_10 < vwma_50 and vwma_10 > vwma_200:
-                rocket = " 🚀"
-
-            tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
-        return tf_results
 
     btc_ticker = "KRW-BTC"
     btc_trade_price = top_volume_coins.get(btc_ticker, None)
