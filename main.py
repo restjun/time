@@ -152,15 +152,21 @@ def format_trade_price_billion(trade_price_billion):
 # ---------------------------- 이 부분만 수정 예정 -----------------------------
 def get_vwma_status(coin):
     tf_results = []
-    for tf_label, tf_api in {
+    tf_data = {}
+
+    timeframes = {
         "1D": "day",
         "4h": "minute240",
         "1h": "minute60",
         "15m": "minute15"
-    }.items():
+    }
+
+    # 1. 모든 시간프레임의 VWMA 값 저장
+    for tf_label, tf_api in timeframes.items():
         df = get_ohlcv_with_retry(coin, interval=tf_api, count=200)
         if df is None:
             tf_results.append(f"{tf_label}: ❌")
+            tf_data[tf_label] = None
             continue
 
         close = df['close'].values
@@ -173,17 +179,52 @@ def get_vwma_status(coin):
 
         if None in [vwma_10, vwma_20, vwma_50, vwma_200]:
             tf_results.append(f"{tf_label}: ❌")
+            tf_data[tf_label] = None
             continue
+
+        tf_data[tf_label] = {
+            "vwma_10": vwma_10,
+            "vwma_20": vwma_20,
+            "vwma_50": vwma_50,
+            "vwma_200": vwma_200
+        }
+
+    # 2. 각 시간 프레임별 상태 표시 + 15m 로켓 조건 평가
+    for tf_label in timeframes:
+        vwmas = tf_data.get(tf_label)
+        if not vwmas:
+            continue
+
+        vwma_10 = vwmas["vwma_10"]
+        vwma_20 = vwmas["vwma_20"]
+        vwma_50 = vwmas["vwma_50"]
+        vwma_200 = vwmas["vwma_200"]
 
         f20 = "✅" if vwma_10 > vwma_20 else "🟥"
         t50 = "✅️" if vwma_10 > vwma_50 else "🟥"
         f200 = "✅" if vwma_10 > vwma_200 else "🟥"
-
         rocket = ""
-        if tf_label == "15m" and vwma_10 > vwma_20 and vwma_10 < vwma_50 and vwma_10 > vwma_200:
-            rocket = " 🚀"
+
+        # 🚀 조건: 15m 조건 + 1h 정배열 + 4h 정배열
+        if tf_label == "15m":
+            cond_15m = vwma_10 > vwma_20 and vwma_10 < vwma_50 and vwma_10 > vwma_200
+
+            cond_1h = False
+            cond_4h = False
+
+            vwmas_1h = tf_data.get("1h")
+            if vwmas_1h:
+                cond_1h = vwmas_1h["vwma_10"] > vwmas_1h["vwma_20"] > vwmas_1h["vwma_50"] > vwmas_1h["vwma_200"]
+
+            vwmas_4h = tf_data.get("4h")
+            if vwmas_4h:
+                cond_4h = vwmas_4h["vwma_10"] > vwmas_4h["vwma_20"] > vwmas_4h["vwma_50"] > vwmas_4h["vwma_200"]
+
+            if cond_15m and cond_1h and cond_4h:
+                rocket = " 🚀"
 
         tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
+
     return tf_results
 # ----------------------------------------------------------------------
 
