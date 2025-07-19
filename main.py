@@ -207,7 +207,7 @@ def get_vwma_status(coin):
 
         # 🚀 조건: 15m 조건 + 1h 정배열 + 4h 정배열
         if tf_label == "15m":
-            cond_15m = vwma_10 < vwma_20 and vwma_10 < vwma_50 and vwma_10 > vwma_200
+            cond_15m = vwma_10 > vwma_20 and vwma_10 < vwma_50 and vwma_10 > vwma_200
 
             cond_1h = False
             cond_4h = False
@@ -221,7 +221,7 @@ def get_vwma_status(coin):
                 cond_4h = vwmas_4h["vwma_10"] > vwmas_4h["vwma_20"] > vwmas_4h["vwma_50"] > vwmas_4h["vwma_200"]
 
             if cond_15m and cond_1h and cond_4h:
-                rocket = " 🚀"
+                rocket = " 🚀🚀🚀"
 
         tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
 
