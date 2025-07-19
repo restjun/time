@@ -201,13 +201,13 @@ def get_vwma_status(coin):
         vwma_200 = vwmas["vwma_200"]
 
         f20 = "✅" if vwma_10 > vwma_20 else "🟥"
-        t50 = "✅️" if vwma_20 > vwma_50 else "🟥"
-        f200 = "✅" if vwma_50 > vwma_200 else "🟥"
+        t50 = "✅️" if vwma_10 > vwma_50 else "🟥"
+        f200 = "✅" if vwma_10 > vwma_200 else "🟥"
         rocket = ""
 
         # 🚀 조건: 15m 조건 + 1h 정배열 + 4h 정배열
         if tf_label == "15m":
-            cond_15m = vwma_10 < vwma_20 and vwma_20 < vwma_50 and vwma_50 > vwma_200
+            cond_15m = vwma_10 < vwma_20 and vwma_10 < vwma_50 and vwma_10 > vwma_200
 
             cond_1h = False
             cond_4h = False
