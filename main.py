@@ -235,7 +235,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 
     message_lines = []
     message_lines.append("*업비트 거래대금 상위 + VWMA 정배열*")
-    message_lines.append("━━━━━━━━━━━━━━━━━━━━━━")
+    message_lines.append("━━━━━━━━━━━━━━━━━━━")
 
     timeframes = {
         "1D": "day",
@@ -252,7 +252,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append(f"📊 BTC | 💰 {format_trade_price_billion(btc_trade_price)} | 📈 {btc_price_change:+.2f}%")
         for tf_result in get_vwma_status(btc_ticker):
             message_lines.append(f"    └ {tf_result}")
-        message_lines.append("──────────────────────")
+        message_lines.append("───────────────────")
 
     filtered_items = [(coin, price) for coin, price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True)
                       if coin != btc_ticker]
@@ -266,7 +266,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
         for tf_result in get_vwma_status(coin):
             message_lines.append(f"    └ {tf_result}")
-        message_lines.append("──────────────────────")
+        message_lines.append("───────────────────")
 
         idx += 1
         if idx > 3:
