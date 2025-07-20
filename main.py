@@ -86,10 +86,10 @@ def get_common_upbit_okx_tickers():
     return matched
 
 def calculate_trade_price(coins):
-    url = "https://api.upbit.com/v1/candles/minutes/1"
+    url = "https://api.upbit.com/v1/candles/minutes/10"
     total_trade_price = {}
     for coin in coins:
-        querystring = {"market": coin, "count": 61}
+        querystring = {"market": coin, "count": 145}
         response = retry_request(requests.get, url, params=querystring)
         if response is None:
             continue
