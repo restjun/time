@@ -207,7 +207,7 @@ def get_vwma_status(coin):
 
         # 🚀 조건: 15m 조건 + 1h 정배열 + 4h 정배열
         if tf_label == "15m":
-            cond_15m = vwma_10 < vwma_20 and vwma_20 < vwma_50 and vwma_50 > vwma_200
+            cond_15m = vwma_10 > vwma_20 and vwma_20 < vwma_50 and vwma_50 > vwma_200
 
             cond_1h = False
             cond_4h = False
