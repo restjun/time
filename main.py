@@ -234,7 +234,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines = []
-    message_lines.append("*업비트 거래대금 상위 + VWMA 정배열*")
+    message_lines.append("*업비트 거래대금 대장 + VWMA 정배열*")
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
 
     timeframes = {
@@ -269,7 +269,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append("───────────────────")
 
         idx += 1
-        if idx > 2:
+        if idx > 1:
             break
 
     if idx == 1:
