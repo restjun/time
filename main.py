@@ -269,7 +269,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append("───────────────────")
 
         idx += 1
-        if idx > 3:
+        if idx > 2:
             break
 
     if idx == 1:
