@@ -155,9 +155,9 @@ def get_vwma_status(coin):
     tf_data = {}
 
     timeframes = {
-        "1D": "day",
-        "4h": "minute240",
-        "1h": "minute60",
+        "1D":   "day",
+        "4h":   "minute240",
+        "1h":   "minute60",
         "15m": "minute15"
     }
 
