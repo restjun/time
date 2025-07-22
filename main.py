@@ -155,9 +155,9 @@ def get_vwma_status(coin):
     tf_data = {}
 
     timeframes = {
-        "1D":   "day",
-        "4h":   "minute240",
-        "1h":   "minute60",
+        "1D":  "day",
+        "4h":  "minute240",
+        "1h":  "minute60",
         "15m": "minute15"
     }
 
@@ -207,14 +207,14 @@ def get_vwma_status(coin):
 
         # 🚀 조건: 15m 조건 + 1h 정배열 + 4h 정배열
         if tf_label == "15m":
-            cond_15m = vwma_20 < vwma_50 and vwma_50 > vwma_200
+            cond_15m = vwma_10 > vwma_20 and vwma_20 < vwma_50 and vwma_50 > vwma_200
 
             cond_1h = False
             cond_4h = False
 
             vwmas_1h = tf_data.get("1h")
             if vwmas_1h:
-                cond_1h = vwmas_1h["vwma_10"] > vwmas_1h["vwma_20"] > vwmas_1h["vwma_50"] > vwmas_1h["vwma_200"]
+                cond_1h = vwmas_1h["vwma_20"] > vwmas_1h["vwma_50"] > vwmas_1h["vwma_200"]
 
             vwmas_4h = tf_data.get("4h")
             if vwmas_4h:
