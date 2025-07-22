@@ -89,7 +89,7 @@ def calculate_trade_price(coins):
     url = "https://api.upbit.com/v1/candles/minutes/10"
     total_trade_price = {}
     for coin in coins:
-        querystring = {"market": coin, "count": 145}
+        querystring = {"market": coin, "count": 7}
         response = retry_request(requests.get, url, params=querystring)
         if response is None:
             continue
@@ -269,7 +269,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append("───────────────────")
 
         idx += 1
-        if idx > 1:
+        if idx > 3:
             break
 
     if idx == 1:
