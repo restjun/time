@@ -288,7 +288,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 def main():
     filtered_tickers = get_common_upbit_okx_tickers()
     top_volume_coins = calculate_trade_price(filtered_tickers)
-    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 500}
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1}
     send_filtered_top_volume_message(filtered_coins)
 
 @app.on_event("startup")
