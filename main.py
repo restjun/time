@@ -208,7 +208,7 @@ def get_vwma_status(coin):
     # 🚀 조건: 1시간 기준 정배열만 판단
     if tf_data.get("1h"):
         v1h = tf_data["1h"]
-        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] > v1h["vwma_50"] > v1h["vwma_200"]
+        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"]
         if cond_1h:
             tf_results.append("🚀 조건: 1h ✅ 🚀")
 
@@ -235,7 +235,7 @@ def send_filtered_top_volume_message(top_volume_coins):
             continue
 
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= 0:
+        if price_change is None or price_change <= -100:
             continue
 
         tf_results = get_vwma_status(coin)
