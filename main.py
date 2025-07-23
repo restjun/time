@@ -107,7 +107,7 @@ def calculate_trade_price(coins):
         except Exception as e:
             logging.error("거래대금 계산 실패 (%s): %s", coin, str(e))
         time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:30])
 
 def calculate_price_change_percentage(coin):
     for _ in range(10):
@@ -188,7 +188,6 @@ def get_vwma_status(coin):
             "vwma_200": vwma_200
         }
 
-    # 상태 표시
     for tf_label in ["1D", "4h", "1h"]:
         vwmas = tf_data.get(tf_label)
         if not vwmas:
@@ -205,11 +204,10 @@ def get_vwma_status(coin):
 
         tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
 
-    # 로켓 조건: 1h + 4h 모두 정배열
     if tf_data.get("1h") and tf_data.get("4h"):
         v1h = tf_data["1h"]
         v4h = tf_data["4h"]
-        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"] > v1h["vwma_200"]
+        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] > v1h["vwma_50"] > v1h["vwma_200"]
         cond_4h = v4h["vwma_10"] > v4h["vwma_20"] > v4h["vwma_50"] > v4h["vwma_200"]
         if cond_1h and cond_4h:
             tf_results.append("🚀 조건: 1h 🟥 + 4h ✅ 🚀🚀🚀")
@@ -217,10 +215,6 @@ def get_vwma_status(coin):
     return tf_results
 
 def send_filtered_top_volume_message(top_volume_coins):
-    if not top_volume_coins:
-        send_telegram_message("🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
-        return
-
     message_lines = []
     message_lines.append("*업비트 거래대금 1위 + 비트*")
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
@@ -235,31 +229,34 @@ def send_filtered_top_volume_message(top_volume_coins):
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("───────────────────")
 
-    filtered_items = [(coin, price) for coin, price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True)
-                      if coin != btc_ticker]
-
     idx = 1
-    for coin, trade_price in filtered_items:
+    for coin, trade_price in top_volume_coins.items():
+        if coin == btc_ticker:
+            continue
+
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= 0:
+        if price_change is None or price_change <= -100:
+            continue
+
+        tf_results = get_vwma_status(coin)
+        is_rocket = any("🚀 조건" in tf for tf in tf_results)
+
+        if not is_rocket:
             continue
 
         message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
-        for tf_result in get_vwma_status(coin):
+        for tf_result in tf_results:
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("───────────────────")
-
         idx += 1
-        if idx > 3:
-            break
 
     if idx == 1:
-        send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
-        return
+        message_lines.append("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
+    else:
+        message_lines.append("🧭 *매매 원칙*")
+        message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n4h: ✅✅️✅️  \n1h: ✅️✅️✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
 
-    message_lines.append("🧭 *매매 원칙*")
-    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n4h: ✅✅️✅️  \n1h: ✅️🟥✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
-    message_lines.append("━━━━━━━━━━━━━━━━━━━━") 
+    message_lines.append("━━━━━━━━━━━━━━━━━━━━")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
 
