@@ -209,7 +209,7 @@ def get_vwma_status(coin):
     if tf_data.get("1h") and tf_data.get("4h"):
         v1h = tf_data["1h"]
         v4h = tf_data["4h"]
-        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] > v1h["vwma_50"] > v1h["vwma_200"]
+        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"] > v1h["vwma_200"]
         cond_4h = v4h["vwma_10"] > v4h["vwma_20"] > v4h["vwma_50"] > v4h["vwma_200"]
         if cond_1h and cond_4h:
             tf_results.append("🚀 조건: 1h ✅ + 4h ✅ 🚀🚀🚀")
@@ -250,7 +250,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append("───────────────────")
 
         idx += 1
-        if idx > 3:
+        if idx > 10:
             break
 
     if idx == 1:
@@ -258,7 +258,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines.append("🧭 *매매 원칙*")
-    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n4h: ✅✅️✅️  \n1h: ✅✅️✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
+    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n4h: ✅✅️✅️  \n1h: ✅️🟥✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
     message_lines.append("━━━━━━━━━━━━━━━━━━━━") 
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
