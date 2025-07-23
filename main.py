@@ -210,7 +210,7 @@ def get_vwma_status(coin):
         cond_1h = v1h["vwma_10"] > v1h["vwma_20"] > v1h["vwma_50"] > v1h["vwma_200"]
         cond_4h = v4h["vwma_10"] > v4h["vwma_20"] > v4h["vwma_50"] > v4h["vwma_200"]
         if cond_1h and cond_4h:
-            tf_results.append("🚀 조건: 1h 🟥 + 4h ✅ 🚀🚀🚀")
+            tf_results.append("🚀 조건: 1h ✅️ + 4h ✅ 🚀🚀🚀")
 
     return tf_results
 
@@ -235,7 +235,7 @@ def send_filtered_top_volume_message(top_volume_coins):
             continue
 
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= -100:
+        if price_change is None or price_change <= 0:
             continue
 
         tf_results = get_vwma_status(coin)
@@ -263,7 +263,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 def main():
     filtered_tickers = get_common_upbit_okx_tickers()
     top_volume_coins = calculate_trade_price(filtered_tickers)
-    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1}
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1000}
     send_filtered_top_volume_message(filtered_coins)
 
 @app.on_event("startup")
