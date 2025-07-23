@@ -215,10 +215,6 @@ def get_vwma_status(coin):
     return tf_results
 
 def send_filtered_top_volume_message(top_volume_coins):
-    if not top_volume_coins:
-        send_telegram_message("🔴 현재 1000억 이상의 거래대금을 가진 코인이 없습니다.\n\n업비트 상태 확인 완료.")
-        return
-
     message_lines = []
     message_lines.append("*업비트 거래대금 1위 + 비트*")
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
@@ -255,12 +251,12 @@ def send_filtered_top_volume_message(top_volume_coins):
         idx += 1
 
     if idx == 1:
-        send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
-        return
+        message_lines.append("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
+    else:
+        message_lines.append("🧭 *매매 원칙*")
+        message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n4h: ✅✅️✅️  \n1h: ✅️🟥✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
 
-    message_lines.append("🧭 *매매 원칙*")
-    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n4h: ✅✅️✅️  \n1h: ✅️🟥✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
-    message_lines.append("━━━━━━━━━━━━━━━━━━━━") 
+    message_lines.append("━━━━━━━━━━━━━━━━━━━━")
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
 
