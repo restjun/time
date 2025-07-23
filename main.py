@@ -203,7 +203,7 @@ def get_vwma_status(coin):
         vwma_50 = vwmas["vwma_50"]
         vwma_200 = vwmas["vwma_200"]
 
-        f20 = "✅" if vwma_5 > vwma_10 else "🟥"
+        f20 = "✅" if vwma_10 > vwma_20 else "🟥"
         t50 = "✅️" if vwma_20 > vwma_50 else "🟥"
         f200 = "✅" if vwma_50 > vwma_200 else "🟥"
         rocket = ""
@@ -217,11 +217,11 @@ def get_vwma_status(coin):
 
             vwmas_1h = tf_data.get("1h")
             if vwmas_1h:
-                cond_1h =  vwmas_1h["vwma_5"] > vwmas_1h["vwma_10"] > vwmas_1h["vwma_20"] > vwmas_1h["vwma_50"] > vwmas_1h["vwma_200"]
+                cond_1h = vwmas_1h["vwma_10"] > vwmas_1h["vwma_20"] > vwmas_1h["vwma_50"] > vwmas_1h["vwma_200"]
 
             vwmas_4h = tf_data.get("4h")
             if vwmas_4h:
-                cond_4h = vwmas_4h["vwma_5"] > vwmas_4h["vwma_10"] > vwmas_4h["vwma_20"] > vwmas_4h["vwma_50"] > vwmas_4h["vwma_200"]
+                cond_4h = vwmas_4h["vwma_10"] > vwmas_4h["vwma_20"] > vwmas_4h["vwma_50"] > vwmas_4h["vwma_200"]
 
             if cond_15m and cond_1h and cond_4h:
                 rocket = " 🚀🚀🚀"
