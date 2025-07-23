@@ -263,7 +263,7 @@ def send_filtered_top_volume_message(top_volume_coins):
     idx = 1
     for coin, trade_price in filtered_items:
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= -100:
+        if price_change is None or price_change <= 0:
             continue
 
         message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
