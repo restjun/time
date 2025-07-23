@@ -188,7 +188,6 @@ def get_vwma_status(coin):
             "vwma_200": vwma_200
         }
 
-    # 상태 표시
     for tf_label in ["1D", "4h", "1h"]:
         vwmas = tf_data.get(tf_label)
         if not vwmas:
@@ -205,7 +204,6 @@ def get_vwma_status(coin):
 
         tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
 
-    # 로켓 조건: 1h + 4h 모두 정배열
     if tf_data.get("1h") and tf_data.get("4h"):
         v1h = tf_data["1h"]
         v4h = tf_data["4h"]
@@ -235,23 +233,26 @@ def send_filtered_top_volume_message(top_volume_coins):
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("───────────────────")
 
-    filtered_items = [(coin, price) for coin, price in sorted(top_volume_coins.items(), key=lambda x: x[1], reverse=True)
-                      if coin != btc_ticker]
-
     idx = 1
-    for coin, trade_price in filtered_items:
+    for coin, trade_price in top_volume_coins.items():
+        if coin == btc_ticker:
+            continue
+
         price_change = calculate_price_change_percentage(coin)
         if price_change is None or price_change <= -100:
             continue
 
+        tf_results = get_vwma_status(coin)
+        is_rocket = any("🚀 조건" in tf for tf in tf_results)
+
+        if not is_rocket:
+            continue
+
         message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
-        for tf_result in get_vwma_status(coin):
+        for tf_result in tf_results:
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("───────────────────")
-
         idx += 1
-        if idx > 20:
-            break
 
     if idx == 1:
         send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
