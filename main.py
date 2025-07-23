@@ -209,10 +209,10 @@ def get_vwma_status(coin):
     if tf_data.get("1h") and tf_data.get("4h"):
         v1h = tf_data["1h"]
         v4h = tf_data["4h"]
-        cond_1h = v1h["vwma_10"] < v1h["vwma_20"] < v1h["vwma_50"] > v1h["vwma_200"]
+        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"] > v1h["vwma_200"]
         cond_4h = v4h["vwma_10"] > v4h["vwma_20"] > v4h["vwma_50"] > v4h["vwma_200"]
         if cond_1h and cond_4h:
-            tf_results.append("🚀 조건: 1h ✅ + 4h ✅ 🚀🚀🚀")
+            tf_results.append("🚀 조건: 1h 🟥 + 4h ✅ 🚀🚀🚀")
 
     return tf_results
 
