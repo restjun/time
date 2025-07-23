@@ -21,6 +21,7 @@ upbit = pyupbit.Upbit(access, secret)
 
 logging.basicConfig(level=logging.INFO)
 
+
 def send_telegram_message(message):
     max_retries = 10
     retry_delay = 5
@@ -155,6 +156,7 @@ def get_vwma_status(coin):
 
     timeframes = {
         "1D":  "day",
+        "4h":  "minute240",
         "1h":  "minute60"
     }
 
@@ -187,7 +189,7 @@ def get_vwma_status(coin):
             "vwma_200": vwma_200
         }
 
-    for tf_label in ["1D", "1h"]:
+    for tf_label in ["1D", "4h", "1h"]:
         vwmas = tf_data.get(tf_label)
         if not vwmas:
             continue
@@ -203,9 +205,10 @@ def get_vwma_status(coin):
 
         tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
 
+    # 🚀 조건: 1시간 기준 정배열만 판단
     if tf_data.get("1h"):
         v1h = tf_data["1h"]
-        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"]
+        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] > v1h["vwma_50"] > v1h["vwma_200"]
         if cond_1h:
             tf_results.append("🚀 조건: 1h ✅ 🚀")
 
@@ -251,7 +254,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
     else:
         message_lines.append("🧭 *매매 원칙*")
-        message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n1h: ✅️🟥⬛️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
+        message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n1h: ✅️✅️✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━━")
     final_message = "\n".join(message_lines)
