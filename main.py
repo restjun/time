@@ -149,6 +149,7 @@ def format_trade_price_billion(trade_price_billion):
         return f"{trillion}조 {billion}억" if billion > 0 else f"{trillion}조"
     return f"{trade_price_billion}억"
 
+# ---------------------------- 이 부분만 수정 예정 -----------------------------
 def get_vwma_status(coin):
     tf_results = []
     tf_data = {}
@@ -156,9 +157,11 @@ def get_vwma_status(coin):
     timeframes = {
         "1D":  "day",
         "4h":  "minute240",
-        "1h":  "minute60"
+        "1h":  "minute60",
+        "15m": "minute15"
     }
 
+    # 1. 모든 시간프레임의 VWMA 값 저장
     for tf_label, tf_api in timeframes.items():
         df = get_ohlcv_with_retry(coin, interval=tf_api, count=200)
         if df is None:
@@ -188,32 +191,45 @@ def get_vwma_status(coin):
             "vwma_200": vwma_200
         }
 
-    # 상태 표시
-    for tf_label in ["1D", "4h", "1h"]:
+    # 2. 각 시간 프레임별 상태 표시 + 15m 로켓 조건 평가
+    for tf_label in timeframes:
         vwmas = tf_data.get(tf_label)
         if not vwmas:
             continue
 
+        vwma_5 = vwmas["vwma_5"]
         vwma_10 = vwmas["vwma_10"]
         vwma_20 = vwmas["vwma_20"]
         vwma_50 = vwmas["vwma_50"]
         vwma_200 = vwmas["vwma_200"]
 
         f20 = "✅" if vwma_10 > vwma_20 else "🟥"
-        t50 = "✅" if vwma_20 > vwma_50 else "🟥"
+        t50 = "✅️" if vwma_20 > vwma_50 else "🟥"
         f200 = "✅" if vwma_50 > vwma_200 else "🟥"
+        rocket = ""
 
-        tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
+        # 🚀 조건: 15m 조건 + 1h 정배열 + 4h 정배열
+        if tf_label == "15m":
+            cond_15m = vwma_20 < vwma_50 and vwma_50 > vwma_200
 
-    # 로켓 조건: 1h + 4h 모두 정배열
-    if tf_data.get("1h"):
-        v1h = tf_data["1h"]
-    
-        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"] 
-        if cond_1h :
-            tf_results.append("🚀 조건: 1h ✅️ + 🟥 🚀🚀🚀")
+            cond_1h = False
+            cond_4h = False
+
+            vwmas_1h = tf_data.get("1h")
+            if vwmas_1h:
+                cond_1h = vwmas_1h["vwma_10"] > vwmas_1h["vwma_20"] > vwmas_1h["vwma_50"] > vwmas_1h["vwma_200"]
+
+            vwmas_4h = tf_data.get("4h")
+            if vwmas_4h:
+                cond_4h = vwmas_4h["vwma_10"] > vwmas_4h["vwma_20"] > vwmas_4h["vwma_50"] > vwmas_4h["vwma_200"]
+
+            if cond_15m and cond_1h and cond_4h:
+                rocket = " 🚀🚀🚀"
+
+        tf_results.append(f"{tf_label}: {f20}{t50}{f200}{rocket}")
 
     return tf_results
+# ----------------------------------------------------------------------
 
 def send_filtered_top_volume_message(top_volume_coins):
     if not top_volume_coins:
@@ -223,6 +239,13 @@ def send_filtered_top_volume_message(top_volume_coins):
     message_lines = []
     message_lines.append("*업비트 거래대금 1위 + 비트*")
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
+
+    timeframes = {
+        "1D": "  day",
+        "4h": "  minute240",
+        "1h": "  minute60",
+        "15m": "minute15"
+    }
 
     btc_ticker = "KRW-BTC"
     btc_trade_price = top_volume_coins.get(btc_ticker, None)
@@ -257,7 +280,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines.append("🧭 *매매 원칙*")
-    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n4h: ✅✅️✅️  \n1h: ✅️🟥✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
+    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n  4h: ✅✅️✅️  \n  1h: ✅✅️✅️   \n15m:🟥🟥✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자  ")
     message_lines.append("━━━━━━━━━━━━━━━━━━━━") 
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
@@ -265,7 +288,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 def main():
     filtered_tickers = get_common_upbit_okx_tickers()
     top_volume_coins = calculate_trade_price(filtered_tickers)
-    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1000}
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1}
     send_filtered_top_volume_message(filtered_coins)
 
 @app.on_event("startup")
