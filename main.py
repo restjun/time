@@ -244,22 +244,27 @@ def send_filtered_top_volume_message(top_volume_coins):
                       if coin != btc_ticker]
 
     idx = 1
+    rocket_found = False
+
     for coin, trade_price in filtered_items:
         price_change = calculate_price_change_percentage(coin)
         if price_change is None or price_change <= 0:
             continue
 
-        message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
-        for tf_result in get_ema_status(coin):
-            message_lines.append(f"    └ {tf_result}")
-        message_lines.append("───────────────────")
+        tf_results = get_ema_status(coin)
 
-        idx += 1
-        if idx > 3:
-            break
+        if any("🚀" in line for line in tf_results):  # 🚀 조건 필터링
+            rocket_found = True
+            message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
+            for tf_result in tf_results:
+                message_lines.append(f"    └ {tf_result}")
+            message_lines.append("───────────────────")
+            idx += 1
+            if idx > 3:
+                break
 
-    if idx == 1:
-        send_telegram_message("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
+    if not rocket_found:
+        send_telegram_message("🔴 현재 🚀 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
         return
 
     message_lines.append("🧭 *매매 원칙*")
