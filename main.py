@@ -114,7 +114,7 @@ def calculate_trade_price(coins):
         except Exception as e:
             logging.error("거래대금 계산 실패 (%s): %s", coin, str(e))
         time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:30])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:10])
 
 def calculate_price_change_percentage(coin):
     for _ in range(10):
@@ -242,7 +242,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 
     for coin, trade_price in filtered_items:
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= -100:
+        if price_change is None or price_change <= 0:
             continue
 
         tf_results = get_ema_status(coin)
@@ -254,7 +254,7 @@ def send_filtered_top_volume_message(top_volume_coins):
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
             idx += 1
-            if idx > 5:
+            if idx > 10:
                 break
 
     if not rocket_found:
