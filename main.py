@@ -206,13 +206,12 @@ def get_vwma_status(coin):
         tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
 
     # 로켓 조건: 1h + 4h 모두 정배열
-    if tf_data.get("1h") and tf_data.get("4h"):
+    if tf_data.get("1h"):
         v1h = tf_data["1h"]
-        v4h = tf_data["4h"]
-        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"] > v1h["vwma_200"]
-        cond_4h = v4h["vwma_10"] > v4h["vwma_20"] > v4h["vwma_50"] > v4h["vwma_200"]
-        if cond_1h and cond_4h:
-            tf_results.append("🚀 조건: 1h 🟥 + 4h ✅ 🚀🚀🚀")
+    
+        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"] 
+        if cond_1h :
+            tf_results.append("🚀 조건: 1h ✅️ + 🟥 🚀🚀🚀")
 
     return tf_results
 
@@ -241,7 +240,7 @@ def send_filtered_top_volume_message(top_volume_coins):
     idx = 1
     for coin, trade_price in filtered_items:
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= -100:
+        if price_change is None or price_change <= 0:
             continue
 
         message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
