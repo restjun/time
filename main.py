@@ -199,21 +199,15 @@ def get_ema_status(coin):
         f200 = "✅" if ema_50 > ema_200 else "🟥"
         rocket = ""
 
+        # 🚀 조건: 1h, 4h 정배열일 때만 로켓
         if tf_label == "15m":
-            cond_15m = ema_20 < ema_50 and ema_50 > ema_200
-
-            cond_1h = False
-            cond_4h = False
-
             emas_1h = tf_data.get("1h")
-            if emas_1h:
-                cond_1h = emas_1h["ema_20"] > emas_1h["ema_50"] > emas_1h["ema_200"]
-
             emas_4h = tf_data.get("4h")
-            if emas_4h:
-                cond_4h = emas_4h["ema_20"] > emas_4h["ema_50"] > emas_4h["ema_200"]
 
-            if cond_15m and cond_1h and cond_4h:
+            cond_1h = emas_1h and emas_1h["ema_20"] > emas_1h["ema_50"] > emas_1h["ema_200"]
+            cond_4h = emas_4h and emas_4h["ema_20"] > emas_4h["ema_50"] > emas_4h["ema_200"]
+
+            if cond_1h and cond_4h:
                 rocket = " 🚀🚀🚀"
 
         tf_results.append(f"{tf_label}: {t50}{f200}{rocket}")
