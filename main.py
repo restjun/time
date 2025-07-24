@@ -11,12 +11,12 @@ import pandas as pd
 
 app = FastAPI()
 
-telegram_bot_token = "YOUR_TELEGRAM_BOT_TOKEN"
-telegram_user_id = 1234567890
+telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
+telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
 
-access = "YOUR_UPBIT_ACCESS_KEY"
-secret = "YOUR_UPBIT_SECRET_KEY"
+access = "QBJxf9YKWDotc63BFbBg2lkwZ9FHpgoBu3vzjeoS"
+secret = "MZqMcGFaZkj7CarqgtIxyoxDcX1xUDB80BAljbWk"
 upbit = pyupbit.Upbit(access, secret)
 
 logging.basicConfig(level=logging.INFO)
