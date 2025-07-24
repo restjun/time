@@ -11,12 +11,12 @@ import pandas as pd
 
 app = FastAPI()
 
-telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
-telegram_user_id = 6596886700
+telegram_bot_token = "YOUR_TELEGRAM_BOT_TOKEN"
+telegram_user_id = 1234567890
 bot = telepot.Bot(telegram_bot_token)
 
-access = "QBJxf9YKWDotc63BFbBg2lkwZ9FHpgoBu3vzjeoS"
-secret = "MZqMcGFaZkj7CarqgtIxyoxDcX1xUDB80BAljbWk"
+access = "YOUR_UPBIT_ACCESS_KEY"
+secret = "YOUR_UPBIT_SECRET_KEY"
 upbit = pyupbit.Upbit(access, secret)
 
 logging.basicConfig(level=logging.INFO)
@@ -107,7 +107,7 @@ def calculate_trade_price(coins):
         except Exception as e:
             logging.error("거래대금 계산 실패 (%s): %s", coin, str(e))
         time.sleep(0.1)
-    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:30])
+    return dict(sorted(total_trade_price.items(), key=lambda x: x[1], reverse=True)[:3])
 
 def calculate_price_change_percentage(coin):
     for _ in range(10):
@@ -204,13 +204,12 @@ def get_vwma_status(coin):
 
         tf_results.append(f"{tf_label}: {f20}{t50}{f200}")
 
-    if tf_data.get("1h") and tf_data.get("4h"):
+    # 🚀 조건: 1시간 기준 정배열만 판단
+    if tf_data.get("1h"):
         v1h = tf_data["1h"]
-        v4h = tf_data["4h"]
-        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"] > v1h["vwma_200"]
-        cond_4h = v4h["vwma_10"] > v4h["vwma_20"] > v4h["vwma_50"] > v4h["vwma_200"]
-        if cond_1h and cond_4h:
-            tf_results.append("🚀 조건: 1h 🟥 + 4h ✅ 🚀🚀🚀")
+        cond_1h = v1h["vwma_10"] > v1h["vwma_20"] < v1h["vwma_50"] 
+        if cond_1h:
+            tf_results.append("🚀 조건: 1h ✅ 🚀")
 
     return tf_results
 
@@ -235,7 +234,7 @@ def send_filtered_top_volume_message(top_volume_coins):
             continue
 
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= -100:
+        if price_change is None or price_change <= 0:
             continue
 
         tf_results = get_vwma_status(coin)
@@ -254,7 +253,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         message_lines.append("🔴 현재 조건을 만족하는 코인이 없습니다.\n🔴 업비트 상태 확인 완료.")
     else:
         message_lines.append("🧭 *매매 원칙*")
-        message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n4h: ✅✅️✅️  \n1h: ✅️🟥✅️  \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
+        message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n1h: ✅️🟥⬛️ \n───────────────────\n📈 하락채널 상단 돌파 할 때 도전 해보자")
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━━")
     final_message = "\n".join(message_lines)
@@ -263,7 +262,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 def main():
     filtered_tickers = get_common_upbit_okx_tickers()
     top_volume_coins = calculate_trade_price(filtered_tickers)
-    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 1}
+    filtered_coins = {coin: volume for coin, volume in top_volume_coins.items() if volume >= 100}
     send_filtered_top_volume_message(filtered_coins)
 
 @app.on_event("startup")
