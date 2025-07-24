@@ -50,13 +50,20 @@ def retry_request(func, *args, **kwargs):
             time.sleep(retry_delay)
     return None
 
-def calculate_vwma(close, volume, period):
-    if len(close) < period or len(volume) < period:
+def calculate_ema(close, period):
+    if len(close) < period:
         return None
     close_series = pd.Series(close)
-    volume_series = pd.Series(volume)
-    vwma = (close_series[-period:] * volume_series[-period:]).sum() / volume_series[-period:].sum()
-    return vwma
+    ema = close_series.ewm(span=period, adjust=False).mean().iloc[-1]
+    return ema
+
+def get_ema_with_retry(close, period):
+    for _ in range(5):
+        result = calculate_ema(close, period)
+        if result is not None:
+            return result
+        time.sleep(0.5)
+    return None
 
 def get_okx_perpetual_symbols():
     try:
@@ -134,14 +141,6 @@ def get_ohlcv_with_retry(coin, interval, count):
         time.sleep(1)
     return None
 
-def get_vwma_with_retry(close, volume, period):
-    for _ in range(5):
-        result = calculate_vwma(close, volume, period)
-        if result is not None:
-            return result
-        time.sleep(0.5)
-    return None
-
 def format_trade_price_billion(trade_price_billion):
     if trade_price_billion >= 10000:
         trillion = trade_price_billion // 10000
@@ -149,8 +148,8 @@ def format_trade_price_billion(trade_price_billion):
         return f"{trillion}조 {billion}억" if billion > 0 else f"{trillion}조"
     return f"{trade_price_billion}억"
 
-# ---------------------------- VWMA 상태 조회 (vwma_10 제거) ----------------------------
-def get_vwma_status(coin):
+# ---------------------------- EMA 상태 조회 ----------------------------
+def get_ema_status(coin):
     tf_results = []
     tf_data = {}
 
@@ -169,52 +168,50 @@ def get_vwma_status(coin):
             continue
 
         close = df['close'].values
-        volume = df['volume'].values
 
-        vwma_5 = get_vwma_with_retry(close, volume, 5)
-        vwma_20 = get_vwma_with_retry(close, volume, 20)
-        vwma_50 = get_vwma_with_retry(close, volume, 50)
-        vwma_200 = get_vwma_with_retry(close, volume, 200)
+        ema_5 = get_ema_with_retry(close, 5)
+        ema_20 = get_ema_with_retry(close, 20)
+        ema_50 = get_ema_with_retry(close, 50)
+        ema_200 = get_ema_with_retry(close, 200)
 
-        if None in [vwma_5, vwma_20, vwma_50, vwma_200]:
+        if None in [ema_5, ema_20, ema_50, ema_200]:
             tf_results.append(f"{tf_label}: ❌")
             tf_data[tf_label] = None
             continue
 
         tf_data[tf_label] = {
-            "vwma_5": vwma_5,
-            "vwma_20": vwma_20,
-            "vwma_50": vwma_50,
-            "vwma_200": vwma_200
+            "ema_5": ema_5,
+            "ema_20": ema_20,
+            "ema_50": ema_50,
+            "ema_200": ema_200
         }
 
     for tf_label in timeframes:
-        vwmas = tf_data.get(tf_label)
-        if not vwmas:
+        emas = tf_data.get(tf_label)
+        if not emas:
             continue
 
-        vwma_5 = vwmas["vwma_5"]
-        vwma_20 = vwmas["vwma_20"]
-        vwma_50 = vwmas["vwma_50"]
-        vwma_200 = vwmas["vwma_200"]
+        ema_20 = emas["ema_20"]
+        ema_50 = emas["ema_50"]
+        ema_200 = emas["ema_200"]
 
-        t50 = "✅️" if vwma_20 > vwma_50 else "🟥"
-        f200 = "✅" if vwma_50 > vwma_200 else "🟥"
+        t50 = "✅️" if ema_20 > ema_50 else "🟥"
+        f200 = "✅" if ema_50 > ema_200 else "🟥"
         rocket = ""
 
         if tf_label == "15m":
-            cond_15m = vwma_20 < vwma_50 and vwma_50 > vwma_200
+            cond_15m = ema_20 < ema_50 and ema_50 > ema_200
 
             cond_1h = False
             cond_4h = False
 
-            vwmas_1h = tf_data.get("1h")
-            if vwmas_1h:
-                cond_1h = vwmas_1h["vwma_20"] > vwmas_1h["vwma_50"] > vwmas_1h["vwma_200"]
+            emas_1h = tf_data.get("1h")
+            if emas_1h:
+                cond_1h = emas_1h["ema_20"] > emas_1h["ema_50"] > emas_1h["ema_200"]
 
-            vwmas_4h = tf_data.get("4h")
-            if vwmas_4h:
-                cond_4h = vwmas_4h["vwma_20"] > vwmas_4h["vwma_50"] > vwmas_4h["vwma_200"]
+            emas_4h = tf_data.get("4h")
+            if emas_4h:
+                cond_4h = emas_4h["ema_20"] > emas_4h["ema_50"] > emas_4h["ema_200"]
 
             if cond_15m and cond_1h and cond_4h:
                 rocket = " 🚀🚀🚀"
@@ -222,7 +219,7 @@ def get_vwma_status(coin):
         tf_results.append(f"{tf_label}: {t50}{f200}{rocket}")
 
     return tf_results
-# --------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 def send_filtered_top_volume_message(top_volume_coins):
     if not top_volume_coins:
@@ -239,7 +236,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 
     if btc_trade_price is not None and btc_price_change is not None:
         message_lines.append(f"📊 BTC | 💰 {format_trade_price_billion(btc_trade_price)} | 📈 {btc_price_change:+.2f}%")
-        for tf_result in get_vwma_status(btc_ticker):
+        for tf_result in get_ema_status(btc_ticker):
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("───────────────────")
 
@@ -253,7 +250,7 @@ def send_filtered_top_volume_message(top_volume_coins):
             continue
 
         message_lines.append(f"📊 {idx}. {coin.replace('KRW-', '')} | 💰 {format_trade_price_billion(trade_price)} | 📈 {price_change:+.2f}%")
-        for tf_result in get_vwma_status(coin):
+        for tf_result in get_ema_status(coin):
             message_lines.append(f"    └ {tf_result}")
         message_lines.append("───────────────────")
 
