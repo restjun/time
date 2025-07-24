@@ -254,7 +254,7 @@ def send_filtered_top_volume_message(top_volume_coins):
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
             idx += 1
-            if idx > 3:
+            if idx > 5:
                 break
 
     if not rocket_found:
