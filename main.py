@@ -200,7 +200,7 @@ def get_ema_status(coin):
         rocket = ""
 
         if tf_label == "15m":
-            cond_15m = ema_20 < ema_50 and ema_50 > ema_200
+            cond_15m = ema_20 > ema_50 and ema_50 > ema_200
 
             cond_1h = False
             cond_4h = False
