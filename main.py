@@ -248,7 +248,7 @@ def send_filtered_top_volume_message(top_volume_coins):
 
     for coin, trade_price in filtered_items:
         price_change = calculate_price_change_percentage(coin)
-        if price_change is None or price_change <= 0:
+        if price_change is None or price_change <= -100:
             continue
 
         tf_results = get_ema_status(coin)
