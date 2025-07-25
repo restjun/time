@@ -262,7 +262,7 @@ def send_filtered_top_volume_message(top_volume_coins):
         return
 
     message_lines.append("🧭 *매매 원칙*")
-    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n  4h: ✅✅️  \n  1h: ✅✅️   \n15m:✅️✅️  \n───────────────────\n📈 1000:1 정배열만하자  ")
+    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n  4h: ✅✅️  \n  1h: ✅✅️   \n15m:✅️✅️  \n───────────────────\n📈 1000:1 정배열 100개이상 캔들유지 확인   ")
     message_lines.append("━━━━━━━━━━━━━━━━━━━━") 
     final_message = "\n".join(message_lines)
     send_telegram_message(final_message)
