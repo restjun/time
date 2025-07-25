@@ -15,7 +15,6 @@ telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
 
-
 logging.basicConfig(level=logging.INFO)
 
 def send_telegram_message(message):
@@ -171,11 +170,15 @@ def get_ema_status(inst_id):
         rocket = ""
 
         if tf_label == "15m":
+            emas_15m = tf_data.get("15m")
             emas_1h = tf_data.get("1h")
             emas_4h = tf_data.get("4h")
+
+            cond_15m = emas_15m and emas_15m["ema_20"] < emas_15m["ema_50"] > emas_15m["ema_200"]
             cond_1h = emas_1h and emas_1h["ema_20"] > emas_1h["ema_50"] > emas_1h["ema_200"]
             cond_4h = emas_4h and emas_4h["ema_20"] > emas_4h["ema_50"] > emas_4h["ema_200"]
-            if cond_1h and cond_4h:
+
+            if cond_15m and cond_1h and cond_4h:
                 rocket = " 🚀🚀🚀"
 
         tf_results.append(f"{tf_label}: {t50}{f200}{rocket}")
