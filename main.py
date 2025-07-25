@@ -181,15 +181,10 @@ def get_ema_status(inst_id):
 
     return tf_results
 
-def format_volume(vol):
-    if vol >= 1e9:
-        return f"{vol/1e9:.2f}B"
-    elif vol >= 1e6:
-        return f"{vol/1e6:.2f}M"
-    elif vol >= 1e3:
-        return f"{vol/1e3:.2f}K"
-    else:
-        return str(round(vol, 2))
+def format_volume(volume):
+    """거래대금을 억 단위로 환산하여 문자열 반환"""
+    volume_eok = volume / 100000000  # 1억 = 100,000,000
+    return f"{volume_eok:.0f}억"
 
 def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     filtered_dict = filter_swap_listed_coins(spot_volume_dict, swap_symbols)
@@ -202,9 +197,9 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     btc_id = "BTC-USDT-SWAP"
     btc_ema = get_ema_status(btc_id)
     btc_change = calculate_daily_change(btc_id)
-    btc_vol = format_volume(spot_volume_dict.get("BTC", 0))
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
-    message_lines.append(f"💰 BTC {btc_change_str} / 거래대금: {btc_vol}")
+    btc_vol_str = format_volume(spot_volume_dict.get("BTC", 0))
+    message_lines.append(f"💰 BTC: {btc_id} {btc_change_str} / 거래대금: {btc_vol_str}")
     for tf_result in btc_ema:
         message_lines.append(f"    └ {tf_result}")
     message_lines.append("───────────────────")
@@ -214,15 +209,16 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     for inst_id, vol in filtered_dict.items():
         if inst_id == btc_id:
             continue
-        base_symbol = inst_id.replace("-USDT-SWAP", "")
         tf_results = get_ema_status(inst_id)
         change = calculate_daily_change(inst_id)
-        vol_str = format_volume(vol)
         change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
+        vol_str = format_volume(vol)
 
         if any("🚀" in line for line in tf_results):
             rocket_found = True
-            message_lines.append(f"📊 {idx}. {base_symbol} {change_str} / 거래대금: {vol_str}")
+            # 코인명은 "ETH" 등으로 표시 (instId에서 base코인만 추출)
+            base_coin = inst_id.replace("-USDT-SWAP", "").upper()
+            message_lines.append(f"📊 {idx}. {base_coin} {change_str} / 거래대금: {vol_str}")
             for tf_result in tf_results:
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
@@ -234,24 +230,4 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
         message_lines.append("🔴 현재 🚀 조건 만족 코인 없음.")
 
     message_lines.append("🧭 *매매 원칙*")
-    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n  4h: ✅✅️  \n  1h: ✅✅️   \n15m:✅️✅️  \n───────────────────")
-    final_message = "\n".join(message_lines)
-    send_telegram_message(final_message)
-
-def main():
-    spot_volume = get_okx_spot_top_volume()
-    swap_symbols = get_okx_perpetual_symbols()
-    send_filtered_top_volume_message(spot_volume, swap_symbols)
-
-@app.on_event("startup")
-def start_scheduler():
-    schedule.every(3).minutes.do(main)
-    threading.Thread(target=run_scheduler, daemon=True).start()
-
-def run_scheduler():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n
