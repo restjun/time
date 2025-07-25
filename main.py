@@ -79,8 +79,10 @@ def get_okx_trade_volume(symbols):
         inst_id = ticker['instId']
         if inst_id not in symbols:
             continue
-        vol = float(ticker['volCcyQuote']) / 100000000  # 억 단위
-        volume_dict[inst_id] = round(vol)
+        vol = float(ticker['volCcyQuote'])  # ✅ 단위 변환 제거
+        volume_dict[inst_id] = vol
+
+    # 거래대금 내림차순 정렬, 상위 10개 추출
     return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:10])
 
 def get_ohlcv_okx(instId, bar='1h', limit=200):
@@ -91,18 +93,10 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
     try:
         df = pd.DataFrame(response.json()['data'], columns=['ts','o','h','l','c','vol','volCcy','volCcyQuote','confirm'])
         df['c'] = df['c'].astype(float)
-        return df.iloc[::-1]  # 시간순 정렬
+        return df.iloc[::-1]
     except Exception as e:
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
-
-# 이 함수는 현재 사용되지 않지만 참고용으로 남겨둠
-def format_trade_price_billion(trade_price_billion):
-    if trade_price_billion >= 10000:
-        trillion = trade_price_billion // 10000
-        billion = trade_price_billion % 10000
-        return f"{trillion}조 {billion}억" if billion > 0 else f"{trillion}조"
-    return f"{trade_price_billion}억"
 
 def get_ema_status(inst_id):
     tf_results = []
@@ -140,7 +134,7 @@ def get_ema_status(inst_id):
             "ema_200": ema_200
         }
 
-        time.sleep(random.uniform(0.3, 0.5))  # 요청 간 간격 적용
+        time.sleep(random.uniform(0.3, 0.5))
 
     for tf_label in timeframes:
         emas = tf_data.get(tf_label)
@@ -182,7 +176,7 @@ def send_filtered_top_volume_message(volume_dict):
 
         if any("🚀" in line for line in tf_results):
             rocket_found = True
-            message_lines.append(f"📊 {idx}. {inst_id}")  # 거래대금 표시 제거됨
+            message_lines.append(f"📊 {idx}. {inst_id}")  # ✅ 거래대금 표시 제거됨
             for tf_result in tf_results:
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
@@ -202,12 +196,12 @@ def send_filtered_top_volume_message(volume_dict):
 def main():
     okx_symbols = get_okx_perpetual_symbols()
     top_volume = get_okx_trade_volume(okx_symbols)
-    filtered = {k: v for k, v in top_volume.items() if v >= 10}  # 10억 이상 필터
+    filtered = {k: v for k, v in top_volume.items() if v >= 1e9}  # ✅ 거래대금 10억 이상 필터 (단위 없는 float 그대로)
     send_filtered_top_volume_message(filtered)
 
 @app.on_event("startup")
 def start_scheduler():
-    schedule.every(3).minutes.do(main)  # 3분 간격으로 실행
+    schedule.every(3).minutes.do(main)
     threading.Thread(target=run_scheduler, daemon=True).start()
 
 def run_scheduler():
