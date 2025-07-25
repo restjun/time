@@ -7,7 +7,6 @@ import threading
 import uvicorn
 import logging
 import pandas as pd
-
 import random
 
 app = FastAPI()
@@ -15,7 +14,6 @@ app = FastAPI()
 telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -98,6 +96,7 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
+# 이 함수는 현재 사용되지 않지만 참고용으로 남겨둠
 def format_trade_price_billion(trade_price_billion):
     if trade_price_billion >= 10000:
         trillion = trade_price_billion // 10000
@@ -141,7 +140,7 @@ def get_ema_status(inst_id):
             "ema_200": ema_200
         }
 
-        time.sleep(random.uniform(0.3, 0.5))  # ✅ 요청 간 간격 적용
+        time.sleep(random.uniform(0.3, 0.5))  # 요청 간 간격 적용
 
     for tf_label in timeframes:
         emas = tf_data.get(tf_label)
@@ -178,12 +177,12 @@ def send_filtered_top_volume_message(volume_dict):
     idx = 1
     rocket_found = False
 
-    for inst_id, vol in volume_dict.items():
+    for inst_id in volume_dict.keys():
         tf_results = get_ema_status(inst_id)
 
         if any("🚀" in line for line in tf_results):
             rocket_found = True
-            message_lines.append(f"📊 {idx}. {inst_id} | 💰 {format_trade_price_billion(vol)}")
+            message_lines.append(f"📊 {idx}. {inst_id}")  # 거래대금 표시 제거됨
             for tf_result in tf_results:
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
@@ -208,7 +207,7 @@ def main():
 
 @app.on_event("startup")
 def start_scheduler():
-    schedule.every(3).minutes.do(main)  # ✅ 3분 간격으로 완화
+    schedule.every(3).minutes.do(main)  # 3분 간격으로 실행
     threading.Thread(target=run_scheduler, daemon=True).start()
 
 def run_scheduler():
