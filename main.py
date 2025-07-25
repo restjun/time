@@ -181,6 +181,16 @@ def get_ema_status(inst_id):
 
     return tf_results
 
+def format_volume(vol):
+    if vol >= 1e9:
+        return f"{vol/1e9:.2f}B"
+    elif vol >= 1e6:
+        return f"{vol/1e6:.2f}M"
+    elif vol >= 1e3:
+        return f"{vol/1e3:.2f}K"
+    else:
+        return str(round(vol, 2))
+
 def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     filtered_dict = filter_swap_listed_coins(spot_volume_dict, swap_symbols)
     if not filtered_dict:
@@ -192,24 +202,27 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     btc_id = "BTC-USDT-SWAP"
     btc_ema = get_ema_status(btc_id)
     btc_change = calculate_daily_change(btc_id)
+    btc_vol = format_volume(spot_volume_dict.get("BTC", 0))
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
-    message_lines.append(f"💰 BTC: {btc_id} {btc_change_str}")
+    message_lines.append(f"💰 BTC {btc_change_str} / 거래대금: {btc_vol}")
     for tf_result in btc_ema:
         message_lines.append(f"    └ {tf_result}")
     message_lines.append("───────────────────")
 
     idx = 1
     rocket_found = False
-    for inst_id in filtered_dict.keys():
+    for inst_id, vol in filtered_dict.items():
         if inst_id == btc_id:
             continue
+        base_symbol = inst_id.replace("-USDT-SWAP", "")
         tf_results = get_ema_status(inst_id)
         change = calculate_daily_change(inst_id)
+        vol_str = format_volume(vol)
         change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
 
         if any("🚀" in line for line in tf_results):
             rocket_found = True
-            message_lines.append(f"📊 {idx}. {inst_id} {change_str}")
+            message_lines.append(f"📊 {idx}. {base_symbol} {change_str} / 거래대금: {vol_str}")
             for tf_result in tf_results:
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
