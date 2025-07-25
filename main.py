@@ -171,10 +171,21 @@ def send_filtered_top_volume_message(volume_dict):
 
     message_lines = ["*OKX 무기한 선물 거래대금 상위 코인*", "━━━━━━━━━━━━━━━━━━━"]
 
+    # ✅ BTC는 조건 없이 항상 표시
+    btc_id = "BTC-USDT-SWAP"
+    btc_ema = get_ema_status(btc_id)
+    message_lines.append(f"💰 BTC: {btc_id}")
+    for tf_result in btc_ema:
+        message_lines.append(f"    └ {tf_result}")
+    message_lines.append("───────────────────")
+
     idx = 1
     rocket_found = False
 
     for inst_id in volume_dict.keys():
+        if inst_id == btc_id:
+            continue  # BTC는 이미 처리했으므로 건너뜀
+
         tf_results = get_ema_status(inst_id)
 
         if any("🚀" in line for line in tf_results):
@@ -188,8 +199,7 @@ def send_filtered_top_volume_message(volume_dict):
                 break
 
     if not rocket_found:
-        send_telegram_message("🔴 현재 🚀 조건 만족 코인 없음.")
-        return
+        message_lines.append("🔴 현재 🚀 조건 만족 코인 없음.")
 
     message_lines.append("🧭 *매매 원칙*")
     message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n  4h: ✅✅️  \n  1h: ✅✅️   \n15m:✅️✅️  \n───────────────────")
@@ -199,7 +209,6 @@ def send_filtered_top_volume_message(volume_dict):
 def main():
     okx_symbols = get_okx_perpetual_symbols()
     top_volume = get_okx_trade_volume(okx_symbols)
-    # 거래대금 필터 제거, 상위 10개만 바로 사용
     send_filtered_top_volume_message(top_volume)
 
 @app.on_event("startup")
