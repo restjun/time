@@ -191,8 +191,9 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
         send_telegram_message("🔴 선물 상장된 현물 거래량 상위 코인 없음.")
         return
 
-    message_lines = ["*OKX 현물 거래대금 기준 선물 상장 코인*", "━━━━━━━━━━━━━━━━━━━"]
+    message_lines = ["*OKX 로켓🚀 조건 만족 코인 (최대 3개)*", "━━━━━━━━━━━━━━━━━━━"]
 
+    # BTC 정보 (항상 포함)
     btc_id = "BTC-USDT-SWAP"
     btc_ema = get_ema_status(btc_id)
     btc_change = calculate_daily_change(btc_id)
@@ -202,27 +203,33 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
         message_lines.append(f"    └ {tf_result}")
     message_lines.append("───────────────────")
 
-    idx = 1
-    rocket_found = False
-    for inst_id in filtered_dict.keys():
+    # 로켓 조건 만족 종목 수집
+    rocket_candidates = []
+    for inst_id, volume in filtered_dict.items():
         if inst_id == btc_id:
             continue
         tf_results = get_ema_status(inst_id)
-        change = calculate_daily_change(inst_id)
-        change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
-
         if any("🚀" in line for line in tf_results):
-            rocket_found = True
-            message_lines.append(f"📊 {idx}. {inst_id} {change_str}")
-            for tf_result in tf_results:
+            daily_change = calculate_daily_change(inst_id)
+            rocket_candidates.append({
+                "inst_id": inst_id,
+                "volume": volume,
+                "tf_results": tf_results,
+                "change": daily_change
+            })
+
+    # 거래대금 기준 정렬 후 상위 3개
+    rocket_candidates_sorted = sorted(rocket_candidates, key=lambda x: x['volume'], reverse=True)[:3]
+
+    if not rocket_candidates_sorted:
+        message_lines.append("🔴 현재 🚀 조건 만족 코인 없음.")
+    else:
+        for idx, item in enumerate(rocket_candidates_sorted, 1):
+            change_str = f"({item['change']:+.2f}%)" if item['change'] is not None else "(N/A)"
+            message_lines.append(f"📊 {idx}. {item['inst_id']} {change_str}")
+            for tf_result in item['tf_results']:
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
-            idx += 1
-            if idx > 10:
-                break
-
-    if not rocket_found:
-        message_lines.append("🔴 현재 🚀 조건 만족 코인 없음.")
 
     message_lines.append("🧭 *매매 원칙*")
     message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n  4h: ✅✅️  \n  1h: ✅✅️   \n15m:✅️✅️  \n───────────────────")
