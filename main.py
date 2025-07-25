@@ -79,7 +79,10 @@ def get_okx_trade_volume(symbols):
         inst_id = ticker['instId']
         if inst_id not in symbols:
             continue
-        vol = float(ticker['volCcyQuote'])  # ✅ 단위 변환 제거
+        try:
+            vol = float(ticker.get('volCcyQuote', 0) or 0)
+        except (ValueError, TypeError):
+            vol = 0.0
         volume_dict[inst_id] = vol
 
     # 거래대금 내림차순 정렬, 상위 10개 추출
@@ -176,7 +179,7 @@ def send_filtered_top_volume_message(volume_dict):
 
         if any("🚀" in line for line in tf_results):
             rocket_found = True
-            message_lines.append(f"📊 {idx}. {inst_id}")  # ✅ 거래대금 표시 제거됨
+            message_lines.append(f"📊 {idx}. {inst_id}")
             for tf_result in tf_results:
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
@@ -196,8 +199,8 @@ def send_filtered_top_volume_message(volume_dict):
 def main():
     okx_symbols = get_okx_perpetual_symbols()
     top_volume = get_okx_trade_volume(okx_symbols)
-    filtered = {k: v for k, v in top_volume.items() if v >= 1e9}  # ✅ 거래대금 10억 이상 필터 (단위 없는 float 그대로)
-    send_filtered_top_volume_message(filtered)
+    # 거래대금 필터 제거, 상위 10개만 바로 사용
+    send_filtered_top_volume_message(top_volume)
 
 @app.on_event("startup")
 def start_scheduler():
