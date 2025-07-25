@@ -173,7 +173,7 @@ def get_ema_status(inst_id):
         if tf_label == "15m":
             emas_1h = tf_data.get("1h")
             emas_4h = tf_data.get("4h")
-            cond_1h = emas_1h and emas_1h["ema_20"] > emas_1h["ema_50"] > emas_1h["ema_200"]
+            cond_1h = emas_1h and emas_1h["ema_20"] < emas_1h["ema_50"] > emas_1h["ema_200"]
             cond_4h = emas_4h and emas_4h["ema_20"] > emas_4h["ema_50"] > emas_4h["ema_200"]
             if cond_1h and cond_4h:
                 rocket = " 🚀🚀🚀"
