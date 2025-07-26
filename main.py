@@ -168,6 +168,7 @@ def get_ema_status(inst_id):
             "ema_200": ema_200
         }
 
+        # EMA 정배열 조건 체크 (20 > 50 > 200)
         if ema_20 > ema_50 > ema_200:
             if tf_label == "1h":
                 rocket_count = max(rocket_count, 1)
@@ -234,9 +235,11 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     send_telegram_message(final_message)
 
 def main():
+    logging.info("=== 작업 시작 ===")
     spot_volume = get_okx_spot_top_volume()
     swap_symbols = get_okx_perpetual_symbols()
     send_filtered_top_volume_message(spot_volume, swap_symbols)
+    logging.info("=== 작업 종료 ===")
 
 @app.on_event("startup")
 def start_scheduler():
@@ -249,4 +252,4 @@ def run_scheduler():
         time.sleep(1)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.
