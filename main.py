@@ -113,17 +113,15 @@ def calculate_daily_change_kst(inst_id):
     try:
         df = df.set_index('ts')
         df.index = df.index.tz_localize('UTC').tz_convert('Asia/Seoul')
-
         today_9am = pd.Timestamp.now(tz='Asia/Seoul').replace(hour=9, minute=0, second=0, microsecond=0)
 
         if today_9am not in df.index:
-            # 가장 가까운 캔들 시간 사용
             nearest_time = df.index[df.index.get_indexer([today_9am], method='nearest')[0]]
         else:
             nearest_time = today_9am
 
         open_price = df.loc[nearest_time]['o']
-        if isinstance(open_price, pd.Series):  # 다중 캔들 있을 경우
+        if isinstance(open_price, pd.Series):
             open_price = open_price.iloc[0]
 
         latest_close = df['c'].iloc[-1]
@@ -136,7 +134,6 @@ def calculate_daily_change_kst(inst_id):
 def get_ema_status(inst_id):
     tf_results = []
     tf_data = {}
-
     timeframes = {
         "1D": "1D",
         "4h": "4H",
@@ -144,9 +141,11 @@ def get_ema_status(inst_id):
         "15m": "15m"
     }
 
+    rocket_count = 0
+
     for tf_label, tf_api in timeframes.items():
         df = get_ohlcv_okx(inst_id, bar=tf_api, limit=200)
-        if df is None:
+        if df is None or len(df) < 200:
             tf_results.append(f"{tf_label}: ❌")
             tf_data[tf_label] = None
             continue
@@ -169,30 +168,24 @@ def get_ema_status(inst_id):
             "ema_200": ema_200
         }
 
-        time.sleep(random.uniform(0.3, 0.5))
-
-    for tf_label in timeframes:
-        emas = tf_data.get(tf_label)
-        if not emas:
-            continue
-
-        ema_20 = emas["ema_20"]
-        ema_50 = emas["ema_50"]
-        ema_200 = emas["ema_200"]
+        if ema_20 > ema_50 > ema_200:
+            if tf_label == "1h":
+                rocket_count = max(rocket_count, 1)
+            elif tf_label == "4h" and rocket_count >= 1:
+                rocket_count = 2
+            elif tf_label == "1D" and rocket_count >= 2:
+                rocket_count = 3
 
         t50 = "✅️" if ema_20 > ema_50 else "🟥"
         f200 = "✅" if ema_50 > ema_200 else "🟥"
-        rocket = ""
+        tf_results.append(f"{tf_label}: {t50}{f200}")
 
-        if tf_label == "15m":
-            emas_1h = tf_data.get("1h")
-            emas_4h = tf_data.get("4h")
-            cond_1h = emas_1h and emas_1h["ema_20"] > emas_1h["ema_50"] > emas_1h["ema_200"]
-            cond_4h = emas_4h and emas_4h["ema_20"] > emas_4h["ema_50"] > emas_4h["ema_200"]
-            if cond_1h and cond_4h:
-                rocket = " 🚀🚀🚀"
+        time.sleep(random.uniform(0.3, 0.5))
 
-        tf_results.append(f"{tf_label}: {t50}{f200}{rocket}")
+    for i in range(len(tf_results)):
+        if tf_results[i].startswith("15m:"):
+            if rocket_count > 0:
+                tf_results[i] += " " + "🚀" * rocket_count
 
     return tf_results
 
