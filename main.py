@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI
 import telepot
 import schedule
@@ -14,6 +15,7 @@ app = FastAPI()
 telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -56,7 +58,18 @@ def get_ema_with_retry(close, period):
         time.sleep(0.5)
     return None
 
-def get_okx_spot_top_volume():
+def get_okx_perpetual_symbols():
+    url = "https://www.okx.com/api/v5/public/instruments?instType=SWAP"
+    response = retry_request(requests.get, url)
+    if response is None:
+        return []
+    data = response.json()
+    return [
+        item['instId'] for item in data.get('data', [])
+        if item['instId'].endswith("-USDT-SWAP")
+    ]
+
+def get_okx_spot_top_volume(limit=100):
     url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT"
     response = retry_request(requests.get, url)
     if response is None:
@@ -66,14 +79,19 @@ def get_okx_spot_top_volume():
     volume_dict = {}
     for ticker in tickers:
         inst_id = ticker['instId']
-        if not inst_id.endswith("-USDT"):
-            continue
         quote_vol = float(ticker.get('volCcyQuote', 0) or 0)
         base_coin = inst_id.replace("-USDT", "")
         volume_dict[base_coin] = quote_vol
 
-    # ✅ 상위 20개만 추출
-    return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:20])
+    return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
+
+def filter_swap_listed_coins(base_coins, swap_symbols):
+    filtered = {}
+    for base in base_coins:
+        swap_id = f"{base}-USDT-SWAP"
+        if swap_id in swap_symbols:
+            filtered[swap_id] = base_coins[base]
+    return filtered
 
 def get_ohlcv_okx(instId, bar='1h', limit=200):
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
@@ -94,9 +112,9 @@ def calculate_daily_change(inst_id):
     if df is None or len(df) < 2:
         return None
     try:
-        prev_close = df.iloc[-2]['c']
-        today_close = df.iloc[-1]['c']
-        change = ((today_close - prev_close) / prev_close) * 100
+        open_price = df.iloc[-1]['o']
+        close_price = df.iloc[-1]['c']
+        change = ((close_price - open_price) / open_price) * 100
         return round(change, 2)
     except Exception as e:
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
@@ -165,30 +183,29 @@ def get_ema_status(inst_id):
 
     return tf_results
 
-def send_top_volume_message(spot_volume_dict):
-    if not spot_volume_dict:
-        send_telegram_message("🔴 거래량 상위 코인 없음.")
+def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
+    filtered_dict = filter_swap_listed_coins(spot_volume_dict, swap_symbols)
+    if not filtered_dict:
+        send_telegram_message("🔴 선물 상장된 현물 거래량 상위 코인 없음.")
         return
 
-    message_lines = ["*OKX 현물 거래대금 기준 상위 20개 코인*", "━━━━━━━━━━━━━━━━━━━"]
+    message_lines = ["*OKX 현물 거래대금 기준 선물 상장 코인*", "━━━━━━━━━━━━━━━━━━━"]
 
     btc_id = "BTC-USDT-SWAP"
     btc_ema = get_ema_status(btc_id)
     btc_change = calculate_daily_change(btc_id)
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
-    message_lines.append(f"📊 {btc_id} {btc_change_str}")
+    message_lines.append(f"💰 BTC: {btc_id} {btc_change_str}")
     for tf_result in btc_ema:
         message_lines.append(f"    └ {tf_result}")
     message_lines.append("───────────────────")
 
     idx = 1
     rocket_found = False
-    for base_coin, volume in spot_volume_dict.items():
-        inst_id = f"{base_coin}-USDT-SWAP"
-        tf_results = get_ema_status(inst_id)
-        if tf_results is None:
+    for inst_id in filtered_dict.keys():
+        if inst_id == btc_id:
             continue
-
+        tf_results = get_ema_status(inst_id)
         change = calculate_daily_change(inst_id)
         change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
 
@@ -199,7 +216,7 @@ def send_top_volume_message(spot_volume_dict):
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
             idx += 1
-            if idx > 20:
+            if idx > 10:
                 break
 
     if not rocket_found:
@@ -211,17 +228,14 @@ def send_top_volume_message(spot_volume_dict):
     send_telegram_message(final_message)
 
 def main():
-    logging.info("메인 함수 시작: OKX 현물 거래대금 상위 코인 조회 및 메시지 전송")
     spot_volume = get_okx_spot_top_volume()
-    send_top_volume_message(spot_volume)
-    logging.info("메인 함수 종료")
+    swap_symbols = get_okx_perpetual_symbols()
+    send_filtered_top_volume_message(spot_volume, swap_symbols)
 
 @app.on_event("startup")
 def start_scheduler():
-    logging.info("스케줄러 시작")
     schedule.every(3).minutes.do(main)
     threading.Thread(target=run_scheduler, daemon=True).start()
-    logging.info("스케줄러 스레드 실행 완료")
 
 def run_scheduler():
     while True:
@@ -229,5 +243,4 @@ def run_scheduler():
         time.sleep(1)
 
 if __name__ == "__main__":
-    logging.info("FastAPI 서버 실행 시작")
     uvicorn.run(app, host="0.0.0.0", port=8000)
