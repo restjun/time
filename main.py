@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+9from fastapi import FastAPI
 import telepot
 import schedule
 import time
@@ -56,7 +56,7 @@ def get_ema_with_retry(close, period):
         time.sleep(0.5)
     return None
 
-def get_okx_spot_top_volume(limit=100):
+def get_okx_spot_top_volume(limit=10):
     url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT"
     response = retry_request(requests.get, url)
     if response is None:
@@ -198,7 +198,7 @@ def send_top_volume_message(spot_volume_dict):
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
             idx += 1
-            if idx > 100:
+            if idx > 10:
                 break
 
     if not rocket_found:
