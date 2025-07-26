@@ -1,4 +1,4 @@
-9from fastapi import FastAPI
+from fastapi import FastAPI
 import telepot
 import schedule
 import time
@@ -56,7 +56,7 @@ def get_ema_with_retry(close, period):
         time.sleep(0.5)
     return None
 
-def get_okx_spot_top_volume(limit=10):
+def get_okx_spot_top_volume():
     url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT"
     response = retry_request(requests.get, url)
     if response is None:
@@ -72,7 +72,8 @@ def get_okx_spot_top_volume(limit=10):
         base_coin = inst_id.replace("-USDT", "")
         volume_dict[base_coin] = quote_vol
 
-    return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
+    # ✅ 상위 20개만 추출
+    return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:20])
 
 def get_ohlcv_okx(instId, bar='1h', limit=200):
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
@@ -169,7 +170,7 @@ def send_top_volume_message(spot_volume_dict):
         send_telegram_message("🔴 거래량 상위 코인 없음.")
         return
 
-    message_lines = ["*OKX 현물 거래대금 기준 상위 코인*", "━━━━━━━━━━━━━━━━━━━"]
+    message_lines = ["*OKX 현물 거래대금 기준 상위 20개 코인*", "━━━━━━━━━━━━━━━━━━━"]
 
     btc_id = "BTC-USDT-SWAP"
     btc_ema = get_ema_status(btc_id)
@@ -198,7 +199,7 @@ def send_top_volume_message(spot_volume_dict):
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
             idx += 1
-            if idx > 10:
+            if idx > 20:
                 break
 
     if not rocket_found:
@@ -210,7 +211,7 @@ def send_top_volume_message(spot_volume_dict):
     send_telegram_message(final_message)
 
 def main():
-    spot_volume = get_okx_spot_top_volume(limit=100)
+    spot_volume = get_okx_spot_top_volume()
     send_top_volume_message(spot_volume)
 
 @app.on_event("startup")
