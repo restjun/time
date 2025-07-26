@@ -67,7 +67,7 @@ def get_okx_perpetual_symbols():
         if item['instId'].endswith("-USDT-SWAP")
     ]
 
-def get_okx_spot_top_volume(limit=10):
+def get_okx_spot_top_volume(limit=20):
     url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT"
     response = retry_request(requests.get, url)
     if response is None:
