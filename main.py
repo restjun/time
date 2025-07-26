@@ -106,18 +106,20 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
+
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
     if df is None or len(df) < 2:
         return None
     try:
-        open_price = df.iloc[-1]['o']
-        close_price = df.iloc[-1]['c']
-        change = ((close_price - open_price) / open_price) * 100
+        prev_close = df.iloc[-2]['c']  # 전일 종가
+        today_close = df.iloc[-1]['c']  # 오늘 종가
+        change = ((today_close - prev_close) / prev_close) * 100
         return round(change, 2)
     except Exception as e:
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
+
 
 def get_ema_status(inst_id):
     tf_results = []
