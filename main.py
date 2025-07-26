@@ -17,16 +17,18 @@ bot = telepot.Bot(telegram_bot_token)
 
 logging.basicConfig(level=logging.INFO)
 
+
 def send_telegram_message(message):
-    for retry_count in range(10):
+    for retry_count in range(1, 11):
         try:
             bot.sendMessage(chat_id=telegram_user_id, text=message, parse_mode="Markdown")
             logging.info("텔레그램 메시지 전송 성공: %s", message)
             return
         except Exception as e:
-            logging.error(f"텔레그램 메시지 전송 실패 (재시도 {retry_count+1}/10): {e}")
+            logging.error("텔레그램 메시지 전송 실패 (재시도 %d/10): %s", retry_count, str(e))
             time.sleep(5)
     logging.error("텔레그램 메시지 전송 실패: 최대 재시도 횟수 초과")
+
 
 def retry_request(func, *args, **kwargs):
     for attempt in range(10):
@@ -38,15 +40,17 @@ def retry_request(func, *args, **kwargs):
                 continue
             return result
         except Exception as e:
-            logging.error(f"API 호출 실패 (재시도 {attempt+1}/10): {e}")
+            logging.error(f"API 호출 실패 (재시도 {attempt+1}/10): {str(e)}")
             time.sleep(5)
     return None
+
 
 def calculate_ema(close, period):
     if len(close) < period:
         return None
     close_series = pd.Series(close)
     return close_series.ewm(span=period, adjust=False).mean().iloc[-1]
+
 
 def get_ema_with_retry(close, period):
     for _ in range(5):
@@ -56,25 +60,46 @@ def get_ema_with_retry(close, period):
         time.sleep(0.5)
     return None
 
-def get_hotcrypto_top30():
-    url = "https://hotcrypto.kr/api/market/all"
+
+def get_okx_perpetual_symbols():
+    url = "https://www.okx.com/api/v5/public/instruments?instType=SWAP"
+    response = retry_request(requests.get, url)
+    if response is None:
+        return []
+    data = response.json()
+    return [
+        item['instId'] for item in data.get('data', [])
+        if item['instId'].endswith("-USDT-SWAP")
+    ]
+
+
+def get_okx_spot_top_volume(limit=30):
+    url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT"
     response = retry_request(requests.get, url)
     if response is None:
         return {}
 
-    data = response.json()
-    coins = data.get("coins", [])
-    # 30위까지만
-    top30 = coins[:30]
+    tickers = response.json().get('data', [])
     volume_dict = {}
-    for coin in top30:
-        name = coin.get("name")
-        volume = float(coin.get("trade_price_24h", 0) or 0)
-        volume_dict[name] = volume
+    for ticker in tickers:
+        inst_id = ticker['instId']
+        quote_vol = float(ticker.get('volCcyQuote', 0) or 0)
+        base_coin = inst_id.replace("-USDT", "")
+        volume_dict[base_coin] = quote_vol
 
-    # 거래대금 높은 순 정렬 후 30개
-    sorted_volume = dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:30])
+    # 거래대금 순서로 정렬 후 limit 개수만 반환
+    sorted_volume = dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
     return sorted_volume
+
+
+def filter_swap_listed_coins(base_coins, swap_symbols):
+    filtered = {}
+    for base in base_coins:
+        swap_id = f"{base}-USDT-SWAP"
+        if swap_id in swap_symbols:
+            filtered[swap_id] = base_coins[base]
+    return filtered
+
 
 def get_ohlcv_okx(instId, bar='1h', limit=200):
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
@@ -90,6 +115,7 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
     except Exception as e:
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
+
 
 def calculate_daily_change_kst(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=48)
@@ -115,6 +141,7 @@ def calculate_daily_change_kst(inst_id):
     except Exception as e:
         logging.error(f"{inst_id} 상승률 계산 오류 (KST 09시 기준): {e}")
         return None
+
 
 def get_ema_status(inst_id):
     tf_results = []
@@ -179,48 +206,60 @@ def get_ema_status(inst_id):
 
     return tf_results
 
-def send_top_volume_message(volume_dict):
-    if not volume_dict:
-        send_telegram_message("🔴 핫크립토 상위 30개 코인 거래대금 정보 없음.")
+
+def format_volume_to_million(volume):
+    """핫크립토 스타일: 소수점 없이 정수만 m 단위로 변환하여 $291m 형식으로 표시"""
+    return f"${int(volume / 1_000_000)}m"
+
+
+def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
+    filtered_dict = filter_swap_listed_coins(spot_volume_dict, swap_symbols)
+    if not filtered_dict:
+        send_telegram_message("🔴 선물 상장된 현물 거래량 상위 코인 없음.")
         return
 
-    message_lines = ["*핫크립토 30위 거래대금 순위*", "━━━━━━━━━━━━━━━━━━━"]
+    # 거래대금 내림차순 정렬 (이미 정렬됐을 가능성 있으나 다시 정렬 보장)
+    filtered_sorted = dict(sorted(filtered_dict.items(), key=lambda x: x[1], reverse=True))
 
-    idx = 1
-    for coin_name, volume in volume_dict.items():
-        inst_id = f"{coin_name}-USDT"
-        tf_results = get_ema_status(inst_id)
-        change = calculate_daily_change_kst(inst_id)
-        change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
+    message_lines = ["*OKX 현물 거래대금 기준 선물 상장 코인*", "━━━━━━━━━━━━━━━━━━━"]
 
-        rocket_flag = any("🚀" in line for line in tf_results)
-        rocket_icon = "🚀" if rocket_flag else ""
+    btc_id = "BTC-USDT-SWAP"
+    if btc_id in filtered_sorted:
+        btc_volume = filtered_sorted.pop(btc_id)
+        btc_volume_formatted = format_volume_to_million(btc_volume)
+        message_lines.append(f"1. BTC : {btc_volume_formatted}")
 
-        message_lines.append(f"{idx}. {inst_id} {change_str}  거래대금: {volume:.2f} {rocket_icon}")
-        for tf_result in tf_results:
-            message_lines.append(f"    └ {tf_result}")
-        message_lines.append("───────────────────")
-        idx += 1
-        if idx > 30:
-            break
+    for idx, (inst_id, vol) in enumerate(filtered_sorted.items(), start=2):
+        vol_formatted = format_volume_to_million(vol)
+        base_coin = inst_id.replace("-USDT-SWAP", "")
+        message_lines.append(f"{idx}. {base_coin} : {vol_formatted}")
 
-    final_message = "\n".join(message_lines)
-    send_telegram_message(final_message)
+    message_lines.append("━━━━━━━━━━━━━━━━━━━")
+    message = "\n".join(message_lines)
 
-def main():
-    volume_dict = get_hotcrypto_top30()
-    send_top_volume_message(volume_dict)
+    send_telegram_message(message)
 
-@app.on_event("startup")
-def start_scheduler():
-    schedule.every(3).minutes.do(main)
-    threading.Thread(target=run_scheduler, daemon=True).start()
+
+def job():
+    logging.info("작업 시작")
+    spot_volume = get_okx_spot_top_volume(limit=30)
+    swap_symbols = get_okx_perpetual_symbols()
+    send_filtered_top_volume_message(spot_volume, swap_symbols)
+    logging.info("작업 완료")
+
 
 def run_scheduler():
+    schedule.every(60).minutes.do(job)
     while True:
         schedule.run_pending()
         time.sleep(1)
 
 
+@app.get("/")
+def read_root():
+    return {"message": "OKX 거래대금 필터링 및 텔레그램 알림 API입니다."}
+
+
 if __name__ == "__main__":
+    threading.Thread(target=run_scheduler, daemon=True).start()
     uvicorn.run(app, host="0.0.0.0", port=8000)
