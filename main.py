@@ -8,7 +8,7 @@ import uvicorn
 import logging
 import pandas as pd
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 app = FastAPI()
 
@@ -106,22 +106,25 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
-# UTC 15시에 맞춰 변동률 계산 함수 수정
+# 한구시간(KST) 15시에 맞춘 변동률 계산 함수 수정
 def calculate_daily_change(inst_id):
-    # 15시 기준 변동률 계산을 위해 OHLCV 2개 받아옴 (2일치)
+    # OHLCV 2일치 데이터 받아오기 (1D 바, 2개)
     df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
     if df is None or len(df) < 2:
         return None
     try:
-        # OKX API의 일봉 데이터는 UTC 00시에 시작, 이를 15시 기준으로 맞추기 위해
-        # 전일 15시를 전일 시가 + 15시간 이동으로 설정하고, 현재 15시를 현재 시가 + 15시간 이동으로 가정
-        # 실제 캔들 데이터의 ts가 00시 기준이므로, 15시 기준 변동률은
-        # (전일 15시 ~ 현재 15시) 변동률 = (현재 00시 시가 + 15시간 이후 가격) - (전일 00시 시가 + 15시간 이후 가격)
-        # 하지만 OHLCV가 1D 단위로 제공되므로, 15시 기준 캔들 대신 00시 캔들로 근사 계산함.
+        # OKX API 일봉 데이터는 UTC 00시 기준.
+        # KST는 UTC +9시간.
+        # 따라서, 15시 KST 기준 시점은 UTC 06시임.
+        # 일봉은 00시~24시 데이터로 제공되어 직접 15시 KST 캔들은 없으므로 근사치 계산.
 
-        # 따라서, 시가(open)와 종가(close)를 그대로 사용하되, 메시지에 15시 기준임을 명시함.
-        open_price = df.iloc[-1]['o']  # 당일 00시 시가
-        close_price = df.iloc[-1]['c'] # 당일 00시 종가
+        # 전일 KST 15시 시점은 df[-2]의 시가에서 9시간 뒤 시점,
+        # 당일 KST 15시 시점은 df[-1]의 시가에서 9시간 뒤 시점으로 근사.
+
+        # 단순히 시가와 종가를 이용해 변동률 계산
+        open_price = df.iloc[-2]['o']  # 전일 시가 (UTC 00시)
+        close_price = df.iloc[-1]['c'] # 당일 종가 (UTC 00시 기준이지만 근사)
+
         change = ((close_price - open_price) / open_price) * 100
         return round(change, 2)
     except Exception as e:
@@ -203,7 +206,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     btc_ema = get_ema_status(btc_id)
     btc_change = calculate_daily_change(btc_id)
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
-    message_lines.append(f"💰 {btc_id} {btc_change_str} (15시 기준)")
+    message_lines.append(f"💰 {btc_id} {btc_change_str} (15시 KST 기준)")
     for tf_result in btc_ema:
         message_lines.append(f"    └ {tf_result}")
     message_lines.append("───────────────────")
@@ -219,7 +222,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
 
         if any("🚀" in line for line in tf_results):
             rocket_found = True
-            message_lines.append(f"📊 {idx}. {inst_id} {change_str} (15시 기준)")
+            message_lines.append(f"📊 {idx}. {inst_id} {change_str} (15시 KST 기준)")
             for tf_result in tf_results:
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
@@ -230,25 +233,28 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     if not rocket_found:
         message_lines.append("🔴 현재 🚀 조건 만족 코인 없음.")
 
-    message_lines.append("🧭 *매매 원칙*")
-    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n  4h: ✅✅️  \n  1h: ✅✅️   \n15m:✅️✅️  \n───────────────────")
-    final_message = "\n".join(message_lines)
-    send_telegram_message(final_message)
+    message_lines.append("🧭 *@okx_mkt_guide*")
+    message_lines.append("━━━━━━━━━━━━━━━━━━━")
+    send_telegram_message("\n".join(message_lines))
 
-def main():
-    spot_volume = get_okx_spot_top_volume()
-    swap_symbols = get_okx_perpetual_symbols()
-    send_filtered_top_volume_message(spot_volume, swap_symbols)
+@app.get("/start")
+async def start():
+    def job():
+        try:
+            swap_symbols = get_okx_perpetual_symbols()
+            spot_volume_dict = get_okx_spot_top_volume()
+            send_filtered_top_volume_message(spot_volume_dict, swap_symbols)
+        except Exception as e:
+            logging.error(f"스케줄 작업 중 오류: {e}")
 
-@app.on_event("startup")
-def start_scheduler():
-    schedule.every(3).minutes.do(main)
-    threading.Thread(target=run_scheduler, daemon=True).start()
+    def run_schedule():
+        schedule.every(30).minutes.do(job)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
 
-def run_scheduler():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    threading.Thread(target=run_schedule, daemon=True).start()
+    return {"message": "OKX 선물 상장 코인 알림 서비스가 시작되었습니다."}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
