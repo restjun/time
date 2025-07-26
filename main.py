@@ -217,7 +217,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
             idx += 1
-            if idx > 10:
+            if idx > 100:
                 break
 
     if not rocket_found:
