@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI
 import telepot
 import schedule
@@ -15,7 +14,6 @@ app = FastAPI()
 telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -102,22 +100,29 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
         df = pd.DataFrame(response.json()['data'], columns=['ts','o','h','l','c','vol','volCcy','volCcyQuote','confirm'])
         df['c'] = df['c'].astype(float)
         df['o'] = df['o'].astype(float)
+        df['ts'] = pd.to_datetime(df['ts'].astype(float), unit='ms')
         return df.iloc[::-1]
     except Exception as e:
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
-def calculate_daily_change(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
-    if df is None or len(df) < 2:
+def calculate_daily_change_kst(inst_id):
+    df = get_ohlcv_okx(inst_id, bar="1H", limit=48)
+    if df is None or len(df) < 24:
         return None
     try:
-        open_price = df.iloc[-1]['o']
-        close_price = df.iloc[-1]['c']
-        change = ((close_price - open_price) / open_price) * 100
+        df = df.set_index('ts')
+        df.index = df.index.tz_localize('UTC').tz_convert('Asia/Seoul')
+
+        today = pd.Timestamp.now(tz='Asia/Seoul').normalize()
+        today_open = df.loc[today]['o']
+        if isinstance(today_open, pd.Series):
+            today_open = today_open.iloc[0]
+        latest_close = df['c'].iloc[-1]
+        change = ((latest_close - today_open) / today_open) * 100
         return round(change, 2)
     except Exception as e:
-        logging.error(f"{inst_id} 상승률 계산 오류: {e}")
+        logging.error(f"{inst_id} 상승률 계산 오류(KST 기준): {e}")
         return None
 
 def get_ema_status(inst_id):
@@ -193,7 +198,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
 
     btc_id = "BTC-USDT-SWAP"
     btc_ema = get_ema_status(btc_id)
-    btc_change = calculate_daily_change(btc_id)
+    btc_change = calculate_daily_change_kst(btc_id)
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
     message_lines.append(f"💰 BTC: {btc_id} {btc_change_str}")
     for tf_result in btc_ema:
@@ -206,7 +211,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
         if inst_id == btc_id:
             continue
         tf_results = get_ema_status(inst_id)
-        change = calculate_daily_change(inst_id)
+        change = calculate_daily_change_kst(inst_id)
         change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
 
         if any("🚀" in line for line in tf_results):
