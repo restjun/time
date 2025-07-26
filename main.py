@@ -15,7 +15,6 @@ telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
 
-
 logging.basicConfig(level=logging.INFO)
 
 def send_telegram_message(message):
@@ -57,18 +56,7 @@ def get_ema_with_retry(close, period):
         time.sleep(0.5)
     return None
 
-def get_okx_perpetual_symbols():
-    url = "https://www.okx.com/api/v5/public/instruments?instType=SWAP"
-    response = retry_request(requests.get, url)
-    if response is None:
-        return []
-    data = response.json()
-    return [
-        item['instId'] for item in data.get('data', [])
-        if item['instId'].endswith("-USDT-SWAP")
-    ]
-
-def get_okx_spot_top_volume(limit=30):
+def get_okx_spot_top_volume(limit=100):
     url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT"
     response = retry_request(requests.get, url)
     if response is None:
@@ -78,19 +66,13 @@ def get_okx_spot_top_volume(limit=30):
     volume_dict = {}
     for ticker in tickers:
         inst_id = ticker['instId']
+        if not inst_id.endswith("-USDT"):
+            continue
         quote_vol = float(ticker.get('volCcyQuote', 0) or 0)
         base_coin = inst_id.replace("-USDT", "")
         volume_dict[base_coin] = quote_vol
 
     return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
-
-def filter_swap_listed_coins(base_coins, swap_symbols):
-    filtered = {}
-    for base in base_coins:
-        swap_id = f"{base}-USDT-SWAP"
-        if swap_id in swap_symbols:
-            filtered[swap_id] = base_coins[base]
-    return filtered
 
 def get_ohlcv_okx(instId, bar='1h', limit=200):
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
@@ -106,20 +88,18 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
-
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
     if df is None or len(df) < 2:
         return None
     try:
-        prev_close = df.iloc[-2]['c']  # 전일 종가
-        today_close = df.iloc[-1]['c']  # 오늘 종가
+        prev_close = df.iloc[-2]['c']
+        today_close = df.iloc[-1]['c']
         change = ((today_close - prev_close) / prev_close) * 100
         return round(change, 2)
     except Exception as e:
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
-
 
 def get_ema_status(inst_id):
     tf_results = []
@@ -184,13 +164,12 @@ def get_ema_status(inst_id):
 
     return tf_results
 
-def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
-    filtered_dict = filter_swap_listed_coins(spot_volume_dict, swap_symbols)
-    if not filtered_dict:
-        send_telegram_message("🔴 선물 상장된 현물 거래량 상위 코인 없음.")
+def send_top_volume_message(spot_volume_dict):
+    if not spot_volume_dict:
+        send_telegram_message("🔴 거래량 상위 코인 없음.")
         return
 
-    message_lines = ["*OKX 현물 거래대금 기준 선물 상장 코인*", "━━━━━━━━━━━━━━━━━━━"]
+    message_lines = ["*OKX 현물 거래대금 기준 상위 코인*", "━━━━━━━━━━━━━━━━━━━"]
 
     btc_id = "BTC-USDT-SWAP"
     btc_ema = get_ema_status(btc_id)
@@ -203,10 +182,12 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
 
     idx = 1
     rocket_found = False
-    for inst_id in filtered_dict.keys():
-        if inst_id == btc_id:
-            continue
+    for base_coin, volume in spot_volume_dict.items():
+        inst_id = f"{base_coin}-USDT-SWAP"
         tf_results = get_ema_status(inst_id)
+        if tf_results is None:
+            continue
+
         change = calculate_daily_change(inst_id)
         change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
 
@@ -229,9 +210,8 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     send_telegram_message(final_message)
 
 def main():
-    spot_volume = get_okx_spot_top_volume()
-    swap_symbols = get_okx_perpetual_symbols()
-    send_filtered_top_volume_message(spot_volume, swap_symbols)
+    spot_volume = get_okx_spot_top_volume(limit=100)
+    send_top_volume_message(spot_volume)
 
 @app.on_event("startup")
 def start_scheduler():
