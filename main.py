@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 from fastapi import FastAPI
 import telepot
 import schedule
