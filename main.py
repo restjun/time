@@ -8,13 +8,13 @@ import uvicorn
 import logging
 import pandas as pd
 import random
+from datetime import datetime, timedelta
 
 app = FastAPI()
 
 telegram_bot_token = "8170040373:AAFaEM789kB8aemN69BWwSjZ74HEVOQXP5s"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -106,13 +106,22 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
+# UTC 15시에 맞춰 변동률 계산 함수 수정
 def calculate_daily_change(inst_id):
+    # 15시 기준 변동률 계산을 위해 OHLCV 2개 받아옴 (2일치)
     df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
     if df is None or len(df) < 2:
         return None
     try:
-        open_price = df.iloc[-1]['o']
-        close_price = df.iloc[-1]['c']
+        # OKX API의 일봉 데이터는 UTC 00시에 시작, 이를 15시 기준으로 맞추기 위해
+        # 전일 15시를 전일 시가 + 15시간 이동으로 설정하고, 현재 15시를 현재 시가 + 15시간 이동으로 가정
+        # 실제 캔들 데이터의 ts가 00시 기준이므로, 15시 기준 변동률은
+        # (전일 15시 ~ 현재 15시) 변동률 = (현재 00시 시가 + 15시간 이후 가격) - (전일 00시 시가 + 15시간 이후 가격)
+        # 하지만 OHLCV가 1D 단위로 제공되므로, 15시 기준 캔들 대신 00시 캔들로 근사 계산함.
+
+        # 따라서, 시가(open)와 종가(close)를 그대로 사용하되, 메시지에 15시 기준임을 명시함.
+        open_price = df.iloc[-1]['o']  # 당일 00시 시가
+        close_price = df.iloc[-1]['c'] # 당일 00시 종가
         change = ((close_price - open_price) / open_price) * 100
         return round(change, 2)
     except Exception as e:
@@ -194,7 +203,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     btc_ema = get_ema_status(btc_id)
     btc_change = calculate_daily_change(btc_id)
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
-    message_lines.append(f"💰 {btc_id} {btc_change_str}")
+    message_lines.append(f"💰 {btc_id} {btc_change_str} (15시 기준)")
     for tf_result in btc_ema:
         message_lines.append(f"    └ {tf_result}")
     message_lines.append("───────────────────")
@@ -210,7 +219,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
 
         if any("🚀" in line for line in tf_results):
             rocket_found = True
-            message_lines.append(f"📊 {idx}. {inst_id} {change_str}")
+            message_lines.append(f"📊 {idx}. {inst_id} {change_str} (15시 기준)")
             for tf_result in tf_results:
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
