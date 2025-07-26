@@ -211,13 +211,17 @@ def send_top_volume_message(spot_volume_dict):
     send_telegram_message(final_message)
 
 def main():
+    logging.info("메인 함수 시작: OKX 현물 거래대금 상위 코인 조회 및 메시지 전송")
     spot_volume = get_okx_spot_top_volume()
     send_top_volume_message(spot_volume)
+    logging.info("메인 함수 종료")
 
 @app.on_event("startup")
 def start_scheduler():
+    logging.info("스케줄러 시작")
     schedule.every(3).minutes.do(main)
     threading.Thread(target=run_scheduler, daemon=True).start()
+    logging.info("스케줄러 스레드 실행 완료")
 
 def run_scheduler():
     while True:
@@ -225,4 +229,5 @@ def run_scheduler():
         time.sleep(1)
 
 if __name__ == "__main__":
+    logging.info("FastAPI 서버 실행 시작")
     uvicorn.run(app, host="0.0.0.0", port=8000)
