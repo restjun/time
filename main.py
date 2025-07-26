@@ -114,15 +114,23 @@ def calculate_daily_change_kst(inst_id):
         df = df.set_index('ts')
         df.index = df.index.tz_localize('UTC').tz_convert('Asia/Seoul')
 
-        today = pd.Timestamp.now(tz='Asia/Seoul').normalize()
-        today_open = df.loc[today]['o']
-        if isinstance(today_open, pd.Series):
-            today_open = today_open.iloc[0]
+        today_9am = pd.Timestamp.now(tz='Asia/Seoul').replace(hour=9, minute=0, second=0, microsecond=0)
+
+        if today_9am not in df.index:
+            # 가장 가까운 캔들 시간 사용
+            nearest_time = df.index[df.index.get_indexer([today_9am], method='nearest')[0]]
+        else:
+            nearest_time = today_9am
+
+        open_price = df.loc[nearest_time]['o']
+        if isinstance(open_price, pd.Series):  # 다중 캔들 있을 경우
+            open_price = open_price.iloc[0]
+
         latest_close = df['c'].iloc[-1]
-        change = ((latest_close - today_open) / today_open) * 100
+        change = ((latest_close - open_price) / open_price) * 100
         return round(change, 2)
     except Exception as e:
-        logging.error(f"{inst_id} 상승률 계산 오류(KST 기준): {e}")
+        logging.error(f"{inst_id} 상승률 계산 오류 (KST 09시 기준): {e}")
         return None
 
 def get_ema_status(inst_id):
@@ -221,7 +229,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
                 message_lines.append(f"    └ {tf_result}")
             message_lines.append("───────────────────")
             idx += 1
-            if idx > 10:
+            if idx > 3:
                 break
 
     if not rocket_found:
