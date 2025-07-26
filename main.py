@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 from fastapi import FastAPI
 import telepot
 import schedule
@@ -203,7 +194,7 @@ def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
     btc_ema = get_ema_status(btc_id)
     btc_change = calculate_daily_change(btc_id)
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
-    message_lines.append(f"💰 BTC: {btc_id} {btc_change_str}")
+    message_lines.append(f"📊 {btc_id} {btc_change_str}")
     for tf_result in btc_ema:
         message_lines.append(f"    └ {tf_result}")
     message_lines.append("───────────────────")
