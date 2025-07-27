@@ -106,9 +106,9 @@ def filter_by_1h_and_4h_ema_alignment(inst_ids):
 
 def calculate_1h_volume(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
-    if df is None or len(df) < 24:
+    if df is None or len(df) < 1:
         return 0
-    return df["volCcyQuote"].sum()  # ✅ 정확한 quote 거래대금 합산
+    return df["volCcyQuote"].sum()
 
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
@@ -132,17 +132,19 @@ def format_volume_in_eok(volume):
 
 def get_ema_status_text(df, timeframe="15m"):
     close = df['c'].values
+    ema_10 = get_ema_with_retry(close, 10)
     ema_20 = get_ema_with_retry(close, 20)
     ema_50 = get_ema_with_retry(close, 50)
     ema_200 = get_ema_with_retry(close, 200)
 
-    if None in [ema_20, ema_50, ema_200]:
+    if None in [ema_10, ema_20, ema_50, ema_200]:
         return f"[{timeframe}] EMA 📊: ❌ 데이터 부족"
 
     def check(cond): return "✅" if cond else "❌"
 
     return (
         f"[{timeframe}] EMA 📊: "
+        f"{check(ema_10 > ema_20)}"  # 🔹 10-20 상태
         f"{check(ema_20 > ema_50)}"
         f"{check(ema_50 > ema_200)}"
     )
@@ -167,7 +169,7 @@ def format_change_with_emoji(change):
     if change is None:
         return "(N/A)"
     if change >= 5:
-        return f"🚀 (+{change:.2f}%)"
+        return f"🚀🚀🚀 (+{change:.2f}%)"
     elif change > 0:
         return f"🟢 (+{change:.2f}%)"
     else:
