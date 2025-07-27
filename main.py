@@ -57,6 +57,7 @@ def get_ema_with_retry(close, period):
     return None
 
 def get_okx_swap_top_volume(limit=30):
+    logging.info("🔄 OKX 선물 거래대금 상위 %d 종목 요청 중...", limit)
     url = "https://www.okx.com/api/v5/market/tickers?instType=SWAP"
     response = retry_request(requests.get, url)
     if response is None:
@@ -69,9 +70,12 @@ def get_okx_swap_top_volume(limit=30):
         quote_vol = float(ticker.get("volCcyQuote", 0) or 0)
         volume_dict[inst_id] = quote_vol
 
-    return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
+    top_dict = dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
+    logging.info("✅ OKX 선물 거래대금 상위 %d 종목 수집 완료", len(top_dict))
+    return top_dict
 
 def get_ohlcv_okx(instId, bar='1h', limit=200):
+    logging.info(f"📊 {instId} - {bar} 캔들 데이터 요청 중...")
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
     response = retry_request(requests.get, url)
     if response is None:
@@ -99,6 +103,7 @@ def calculate_daily_change(inst_id):
         return None
 
 def get_ema_status(inst_id):
+    logging.info(f"📈 {inst_id} - EMA 분석 시작")
     tf_results = []
     tf_data = {}
 
@@ -159,12 +164,15 @@ def get_ema_status(inst_id):
 
         tf_results.append(f"{tf_label}: {t50}{f200}{rocket}")
 
+    logging.info(f"✅ {inst_id} EMA 분석 완료")
     return tf_results
 
 def send_top_swap_volume_message(swap_volume_dict):
     if not swap_volume_dict:
         send_telegram_message("🔴 거래량 상위 선물 코인 없음.")
         return
+
+    send_telegram_message("📡 선물 코인 분석을 시작합니다...")
 
     message_lines = ["*OKX 선물 거래대금 기준 분석*", "━━━━━━━━━━━━━━━━━━━"]
 
@@ -205,6 +213,7 @@ def send_top_swap_volume_message(swap_volume_dict):
     send_telegram_message(final_message)
 
 def main():
+    logging.info("📥 메인 프로세스 시작 - 선물 데이터 요청")
     swap_volume = get_okx_swap_top_volume()
     send_top_swap_volume_message(swap_volume)
 
