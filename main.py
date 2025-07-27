@@ -17,6 +17,8 @@ bot = telepot.Bot(telegram_bot_token)
 
 logging.basicConfig(level=logging.INFO)
 
+
+
 def send_telegram_message(message):
     for retry_count in range(1, 11):
         try:
@@ -156,7 +158,7 @@ def get_btc_ema_status_all_timeframes():
             status = get_ema_status_text(df, timeframe=tf)
         else:
             status = f"[{tf}] EMA 📊: ❌ 불러오기 실패"
-        status_texts.append(status)
+        status_texts.append(f"    {status}")  # 들여쓰기 4칸
         time.sleep(random.uniform(0.2, 0.4))
     
     return "\n".join(status_texts)
@@ -224,3 +226,4 @@ def run_scheduler():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
