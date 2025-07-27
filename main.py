@@ -196,7 +196,7 @@ def send_ranked_volume_message(bullish_ids):
         )
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
-    message_lines.append("📡 *Powered by OKX + FastAPI + EMA Analyzer*")
+    message_lines.append("📡 *원칙매매*")
 
     send_telegram_message("\n".join(message_lines))
 
