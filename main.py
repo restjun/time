@@ -217,7 +217,7 @@ def send_ranked_volume_message(bullish_ids):
         star = ""
         if change is not None and change > 0 and df_15m is not None:
             if is_15m_ema_dead_cross(df_15m):
-                star = "  🚀"
+                star = "  🚀🚀🚀"
 
         message_lines.append(
             f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n   {ema_status}{star}"
