@@ -193,9 +193,9 @@ def send_ranked_volume_message(bullish_ids):
         ema_status = get_ema_status_text(df_15m, timeframe="15m") if df_15m is not None else "[15m] EMA 📊: ❌ 정보 없음"
         name = inst_id.replace("-USDT-SWAP", "")
         volume_text = format_volume_in_eok(vol)
- 
+
         message_lines.append(
-            f"*{rank}. {name}* {change_str} | 💸 거래대금: {volume_text}\n{ema_status}"
+            f"*{rank}. {name}* {change_str} | 💸 거래대금: {volume_text}\n    {ema_status}"
         )
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
