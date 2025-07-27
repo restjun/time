@@ -159,13 +159,13 @@ def get_btc_ema_status_all_timeframes():
 
 def send_ranked_volume_message(bullish_ids):
     volume_data = {}
-
     btc_id = "BTC-USDT-SWAP"
     btc_ema_status_all = get_btc_ema_status_all_timeframes()
     btc_change = calculate_daily_change(btc_id)
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
     btc_volume = calculate_1h_volume(btc_id)
     btc_name = btc_id.replace("-USDT-SWAP", "")
+    btc_volume_str = format_volume_in_eok(btc_volume)
 
     for inst_id in bullish_ids:
         vol = calculate_1h_volume(inst_id)
@@ -174,27 +174,30 @@ def send_ranked_volume_message(bullish_ids):
 
     sorted_data = sorted(volume_data.items(), key=lambda x: x[1], reverse=True)
 
-    message_lines = ["📊 *1H + 4H 정배열 & 거래대금 랭킹*", "━━━━━━━━━━━━━━━━━━━"]
-
-    # BTC 상태 전체 타임프레임 출력
-    message_lines.append(f"📌 *{btc_name}* {btc_change_str}")
-    message_lines.append(btc_ema_status_all)
-    message_lines.append("━━━━━━━━━━━━━━━━━━━")
+    message_lines = [
+        "📊 *OKX 정배열 매물대 분석*", 
+        "📅 *1H + 4H EMA 정배열 & 거래대금 TOP 10*",
+        "━━━━━━━━━━━━━━━━━━━",
+        f"💰 *BTC 상태* {btc_change_str} / 거래대금: {btc_volume_str}",
+        btc_ema_status_all,
+        "━━━━━━━━━━━━━━━━━━━"
+    ]
 
     for rank, (inst_id, vol) in enumerate(sorted_data[:10], start=1):
         change = calculate_daily_change(inst_id)
         change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
-
         df_15m = get_ohlcv_okx(inst_id, bar="15m", limit=200)
-        ema_status = get_ema_status_text(df_15m, timeframe="15m") if df_15m is not None else "[15m] EMA 📈: 불러오기 실패"
-
+        ema_status = get_ema_status_text(df_15m, timeframe="15m") if df_15m is not None else "❌ 15m EMA 정보 없음"
         name = inst_id.replace("-USDT-SWAP", "")
         volume_text = format_volume_in_eok(vol)
 
-        message_lines.append(f"{rank}. {name} {change_str} - 거래대금: {volume_text}")
-        message_lines.append(f"   {ema_status}")
+        message_lines.append(
+            f"*{rank}. {name}* {change_str} | 💸 거래대금: {volume_text}\n{ema_status}"
+        )
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
+    message_lines.append("📡 *Powered by OKX + FastAPI + EMA Analyzer*")
+
     send_telegram_message("\n".join(message_lines))
 
 def main():
