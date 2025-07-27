@@ -89,25 +89,6 @@ def is_ema_bullish(df):
         return False
     return ema_20 > ema_50 > ema_200
 
-def filter_by_1h_and_4h_ema_alignment(inst_ids):
-    bullish_ids = []
-    for inst_id in inst_ids:
-        df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=200)
-        df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=200)
-        if df_1h is None or df_4h is None:
-            continue
-        if is_ema_bullish(df_1h) and is_ema_bullish(df_4h):
-            bullish_ids.append(inst_id)
-        time.sleep(random.uniform(0.2, 0.4))
-    return bullish_ids
-
-def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
-    if df is None or len(df) < 24:
-        return 0
-    df["quote_volume"] = df["c"] * df["vol"]
-    return df["quote_volume"].sum()
-
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
     if df is None or len(df) < 2:
@@ -121,31 +102,96 @@ def calculate_daily_change(inst_id):
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
 
-def send_ranked_volume_message(bullish_ids):
-    volume_data = {}
-    for inst_id in bullish_ids:
-        vol = calculate_1h_volume(inst_id)
-        volume_data[inst_id] = vol
+def analyze_symbols_with_detail(inst_ids):
+    results = []
+    for inst_id in inst_ids:
+        df_1d = get_ohlcv_okx(inst_id, bar='1D', limit=200)
+        df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=200)
+        df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=200)
+        df_15m = get_ohlcv_okx(inst_id, bar='15m', limit=200)
+        
+        if None in [df_1d, df_4h, df_1h, df_15m]:
+            continue
+        
+        bullish_1d = is_ema_bullish(df_1d)
+        bullish_4h = is_ema_bullish(df_4h)
+        bullish_1h = is_ema_bullish(df_1h)
+        bullish_15m = is_ema_bullish(df_15m)
+        
+        daily_change = calculate_daily_change(inst_id)
+        
+        results.append({
+            "inst_id": inst_id,
+            "daily_change": daily_change,
+            "bullish_1d": bullish_1d,
+            "bullish_4h": bullish_4h,
+            "bullish_1h": bullish_1h,
+            "bullish_15m": bullish_15m
+        })
         time.sleep(random.uniform(0.2, 0.4))
+    return results
 
-    sorted_data = sorted(volume_data.items(), key=lambda x: x[1], reverse=True)
-
-    message_lines = ["📊 *1H + 4H 정배열 & 거래대금 랭킹*", "━━━━━━━━━━━━━━━━━━━"]
-    for rank, (inst_id, vol) in enumerate(sorted_data[:10], start=1):
-        change = calculate_daily_change(inst_id)
-        change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
-        message_lines.append(f"{rank}. {inst_id} {change_str} - 거래대금: {vol:,.0f}")
-    message_lines.append("━━━━━━━━━━━━━━━━━━━")
-    send_telegram_message("\n".join(message_lines))
+def format_analysis_message(results):
+    # 메인 타이틀
+    message_lines = ["📡 선물 코인 분석을 시작합니다..."]
+    
+    # 상승률 내림차순 정렬
+    results = sorted(results, key=lambda x: (x["daily_change"] if x["daily_change"] is not None else -9999), reverse=True)
+    
+    # BTC는 최상단 고정 처리 (있으면)
+    btc = next((r for r in results if r["inst_id"].startswith("BTC-")), None)
+    if btc:
+        results.remove(btc)
+        btc_change = f"(+{btc['daily_change']:.2f}%)" if btc['daily_change'] is not None else ""
+        message_lines.append(f"💰 BTC: {btc['inst_id']} {btc_change}")
+        message_lines.append(f"    └ 1D: {'✅️✅' if btc['bullish_1d'] else '🟥️🟥'}")
+        message_lines.append(f"    └ 4h: {'✅️✅' if btc['bullish_4h'] else '🟥️🟥'}")
+        message_lines.append(f"    └ 1h: {'✅️✅' if btc['bullish_1h'] else '🟥️🟥'}")
+        message_lines.append(f"    └ 15m: {'✅️✅ 🚀🚀🚀' if btc['bullish_15m'] else '🟥️🟥'}")
+        message_lines.append("───────────────────")
+    
+    # 나머지 코인 최대 10개 출력
+    count = 1
+    has_rocket = False
+    for r in results[:10]:
+        change_str = f"(+{r['daily_change']:.2f}%)" if r['daily_change'] is not None else "(N/A)"
+        message_lines.append(f"📊 {count}. {r['inst_id']} {change_str}")
+        message_lines.append(f"    └ 1D: {'✅️✅' if r['bullish_1d'] else '🟥️🟥'}")
+        message_lines.append(f"    └ 4h: {'✅️✅' if r['bullish_4h'] else '🟥️🟥'}")
+        message_lines.append(f"    └ 1h: {'✅️✅' if r['bullish_1h'] else '🟥️🟥'}")
+        if r['bullish_15m']:
+            message_lines.append(f"    └ 15m: ✅️✅ 🚀🚀🚀")
+            has_rocket = True
+        else:
+            message_lines.append(f"    └ 15m: 🟥️🟥")
+        message_lines.append("───────────────────")
+        count += 1
+    
+    if not has_rocket:
+        message_lines.append("🔴 현재 🚀 조건 만족 코인 없음.")
+    message_lines.append("")
+    message_lines.append("🧭 *매매 원칙*")
+    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절")
+    message_lines.append("  4h: ✅✅️  ")
+    message_lines.append("  1h: ✅✅️   ")
+    message_lines.append("15m:✅️✅️  ")
+    message_lines.append("───────────────────")
+    return "\n".join(message_lines)
 
 def main():
-    logging.info("📥 전체 종목 기준 정배열 + 거래대금 분석 시작")
+    logging.info("📥 전체 종목 분석 시작")
     all_ids = get_all_okx_swap_symbols()
-    bullish_ids = filter_by_1h_and_4h_ema_alignment(all_ids)
-    if not bullish_ids:
-        send_telegram_message("🔴 1H + 4H 정배열 종목 없음.")
+    if not all_ids:
+        send_telegram_message("⚠️ OKX 선물 코인 리스트를 불러올 수 없습니다.")
         return
-    send_ranked_volume_message(bullish_ids)
+    
+    results = analyze_symbols_with_detail(all_ids)
+    if not results:
+        send_telegram_message("⚠️ 분석 가능한 코인 데이터가 없습니다.")
+        return
+    
+    message = format_analysis_message(results)
+    send_telegram_message(message)
 
 @app.on_event("startup")
 def start_scheduler():
