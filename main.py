@@ -205,7 +205,7 @@ def send_ranked_volume_message(bullish_ids):
         volume_text = format_volume_in_eok(vol)
 
         message_lines.append(
-            f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n    📊 {ema_status}"
+            f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n     {ema_status}"
         )
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
