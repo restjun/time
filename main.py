@@ -178,7 +178,7 @@ def send_ranked_volume_message(bullish_ids):
         "📊 *OKX 정배열 매물대 분석*", 
         "📅 *1H + 4H EMA 정배열 & 거래대금 TOP 10*",
         "━━━━━━━━━━━━━━━━━━━",
-        f"💰 *BTC 상태* {btc_change_str} / 거래대금: {btc_volume_str}",
+        f"💰 *BTC* {btc_change_str} / 거래대금: {btc_volume_str}",
         btc_ema_status_all,
         "━━━━━━━━━━━━━━━━━━━"
     ]
@@ -192,7 +192,7 @@ def send_ranked_volume_message(bullish_ids):
         volume_text = format_volume_in_eok(vol)
 
         message_lines.append(
-            f"*{rank}. {name}* {change_str} | 💸 거래대금: {volume_text}\n{ema_status}"
+            f"*{rank}. {name}* {change_str} | 💸 거래대금: {volume_text}\n [{ema_status}]"
         )
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
