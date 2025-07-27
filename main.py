@@ -204,8 +204,22 @@ def send_ranked_volume_message(bullish_ids):
         name = inst_id.replace("-USDT-SWAP", "")
         volume_text = format_volume_in_eok(vol)
 
+        # 15분봉 EMA 20-50 데드크로스 체크 함수
+        def is_15m_ema_dead_cross(df):
+            close = df['c'].values
+            ema_20 = get_ema_with_retry(close, 20)
+            ema_50 = get_ema_with_retry(close, 50)
+            if None in [ema_20, ema_50]:
+                return False
+            return ema_20 < ema_50
+
+        star = ""
+        if change is not None and change > 0 and df_15m is not None:
+            if is_15m_ema_dead_cross(df_15m):
+                star = "  ★"
+
         message_lines.append(
-            f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n    {ema_status}"
+            f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n    {ema_status}{star}"
         )
         # 얇은 선 추가
         message_lines.append("─────")
