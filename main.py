@@ -80,35 +80,18 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
-def is_ema_bullish(df):
+def check_ema_alignment(df):
+    if df is None or len(df) < 200:
+        return None
     close = df['c'].values
     ema_20 = get_ema_with_retry(close, 20)
     ema_50 = get_ema_with_retry(close, 50)
     ema_200 = get_ema_with_retry(close, 200)
     if None in [ema_20, ema_50, ema_200]:
-        return False
+        return None
     return ema_20 > ema_50 > ema_200
 
-def filter_by_1h_and_4h_ema_alignment(inst_ids):
-    bullish_ids = []
-    for inst_id in inst_ids:
-        df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=200)
-        df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=200)
-        if df_1h is None or df_4h is None:
-            continue
-        if is_ema_bullish(df_1h) and is_ema_bullish(df_4h):
-            bullish_ids.append(inst_id)
-        time.sleep(random.uniform(0.2, 0.4))
-    return bullish_ids
-
-def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
-    if df is None or len(df) < 24:
-        return 0
-    df["quote_volume"] = df["c"] * df["vol"]
-    return df["quote_volume"].sum()
-
-def calculate_daily_change(inst_id):
+def calculate_1d_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
     if df is None or len(df) < 2:
         return None
@@ -121,31 +104,66 @@ def calculate_daily_change(inst_id):
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
 
-def send_ranked_volume_message(bullish_ids):
-    volume_data = {}
-    for inst_id in bullish_ids:
-        vol = calculate_1h_volume(inst_id)
-        volume_data[inst_id] = vol
-        time.sleep(random.uniform(0.2, 0.4))
-
-    sorted_data = sorted(volume_data.items(), key=lambda x: x[1], reverse=True)
-
-    message_lines = ["📊 *1H + 4H 정배열 & 거래대금 랭킹*", "━━━━━━━━━━━━━━━━━━━"]
-    for rank, (inst_id, vol) in enumerate(sorted_data[:10], start=1):
-        change = calculate_daily_change(inst_id)
-        change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
-        message_lines.append(f"{rank}. {inst_id} {change_str} - 거래대금: {vol:,.0f}")
-    message_lines.append("━━━━━━━━━━━━━━━━━━━")
-    send_telegram_message("\n".join(message_lines))
-
 def main():
-    logging.info("📥 전체 종목 기준 정배열 + 거래대금 분석 시작")
+    logging.info("📡 선물 코인 분석을 시작합니다...")
     all_ids = get_all_okx_swap_symbols()
-    bullish_ids = filter_by_1h_and_4h_ema_alignment(all_ids)
-    if not bullish_ids:
-        send_telegram_message("🔴 1H + 4H 정배열 종목 없음.")
-        return
-    send_ranked_volume_message(bullish_ids)
+
+    results = []
+    for inst_id in all_ids:
+        # 각 타임프레임 데이터 호출
+        df_1d = get_ohlcv_okx(inst_id, bar='1D', limit=200)
+        df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=200)
+        df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=200)
+        df_15m = get_ohlcv_okx(inst_id, bar='15m', limit=200)
+
+        # EMA 정배열 여부 체크, 계산 불가시 None
+        align_1d = check_ema_alignment(df_1d)
+        align_4h = check_ema_alignment(df_4h)
+        align_1h = check_ema_alignment(df_1h)
+        align_15m = check_ema_alignment(df_15m)
+
+        change = calculate_1d_change(inst_id)
+
+        results.append({
+            "inst_id": inst_id,
+            "change": change,
+            "1d": align_1d,
+            "4h": align_4h,
+            "1h": align_1h,
+            "15m": align_15m
+        })
+        time.sleep(random.uniform(0.3, 0.6))
+
+    # 🚀 조건: 1D, 4H, 1H 모두 정배열(즉 True)
+    rocket_coins = [r for r in results if  r["4h"] and r["1h"]]
+
+    # 메시지 생성
+    message_lines = ["📡 선물 코인 분석을 시작합니다..."]
+    if rocket_coins:
+        for i, coin in enumerate(rocket_coins[:10], start=1):
+            def emoji_status(val):
+                if val is None:
+                    return "❌"
+                return "✅️" if val else "🟥"
+
+            msg = f"💰 {coin['inst_id']} (+{coin['change'] if coin['change'] is not None else 'N/A'}%)\n" \
+                  f"    └ 1D: {emoji_status(coin['1d'])}\n" \
+                  f"    └ 4h: {emoji_status(coin['4h'])}\n" \
+                  f"    └ 1h: {emoji_status(coin['1h'])}\n" \
+                  f"    └ 15m: {emoji_status(coin['15m'])} 🚀🚀🚀\n" \
+                  "───────────────────"
+            message_lines.append(msg)
+    else:
+        message_lines.append("🔴 현재 🚀 조건 만족 코인 없음.")
+
+    message_lines.append("\n🧭 *매매 원칙*")
+    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 ")
+    message_lines.append("  4h: ✅✅️  ")
+    message_lines.append("  1h: ✅✅️   ")
+    message_lines.append("15m:✅️✅️  ")
+    message_lines.append("───────────────────")
+
+    send_telegram_message("\n".join(message_lines))
 
 @app.on_event("startup")
 def start_scheduler():
