@@ -105,7 +105,7 @@ def filter_by_1h_and_4h_ema_alignment(inst_ids):
     return bullish_ids
 
 def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
+    df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
     if df is None or len(df) < 24:
         return 0
     return df["volCcyQuote"].sum()  # ✅ 정확한 quote 거래대금 합산
@@ -217,10 +217,10 @@ def send_ranked_volume_message(bullish_ids):
         star = ""
         if change is not None and change > 0 and df_15m is not None:
             if is_15m_ema_dead_cross(df_15m):
-                star = "  ✨️✨️✨️ 차트확인"
+                star = "  🎯🎯🎯 차트확인"
 
         message_lines.append(
-            f"*{rank}. {name}* {change_str} | 💲 {volume_text}\n   {ema_status}{star}"
+            f"*{rank}. {name}* {change_str} | 💰 {volume_text}\n   {ema_status}{star}"
         )
         message_lines.append("─────")
 
