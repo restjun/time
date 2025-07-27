@@ -144,12 +144,24 @@ def get_ema_status_text(df, timeframe="15m"):
            f"{arrow(ema_50, ema_200)}50 {('>' if ema_50 > ema_200 else '<')} " \
            f"{arrow(ema_20, ema_200)}200"
 
+def get_btc_ema_status_all_timeframes():
+    timeframes = ['1D', '4H', '1H', '15m']
+    status_texts = []
+    btc_id = "BTC-USDT-SWAP"
+    for tf in timeframes:
+        df = get_ohlcv_okx(btc_id, bar=tf, limit=200)
+        if df is not None:
+            status_texts.append(get_ema_status_text(df, timeframe=tf))
+        else:
+            status_texts.append(f"[{tf}] EMA 📈: 불러오기 실패")
+        time.sleep(random.uniform(0.2, 0.4))
+    return "\n".join(status_texts)
+
 def send_ranked_volume_message(bullish_ids):
     volume_data = {}
 
     btc_id = "BTC-USDT-SWAP"
-    btc_df_15m = get_ohlcv_okx(btc_id, bar="15m", limit=200)
-    btc_ema_status = get_ema_status_text(btc_df_15m, timeframe="15m") if btc_df_15m is not None else "[15m] EMA 📈: 불러오기 실패"
+    btc_ema_status_all = get_btc_ema_status_all_timeframes()
     btc_change = calculate_daily_change(btc_id)
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
     btc_volume = calculate_1h_volume(btc_id)
@@ -164,8 +176,9 @@ def send_ranked_volume_message(bullish_ids):
 
     message_lines = ["📊 *1H + 4H 정배열 & 거래대금 랭킹*", "━━━━━━━━━━━━━━━━━━━"]
 
+    # BTC 상태 전체 타임프레임 출력
     message_lines.append(f"📌 *{btc_name}* {btc_change_str}")
-    message_lines.append(f"   {btc_ema_status}")
+    message_lines.append(btc_ema_status_all)
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
 
     for rank, (inst_id, vol) in enumerate(sorted_data[:10], start=1):
