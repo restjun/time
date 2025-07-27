@@ -135,14 +135,16 @@ def get_ema_status_text(df, timeframe="15m"):
     ema_200 = get_ema_with_retry(close, 200)
 
     if None in [ema_20, ema_50, ema_200]:
-        return f"[{timeframe}] EMA 📈: ❌"
+        return f"[{timeframe}] EMA 📊: ❌ 데이터 부족"
 
-    def arrow(a, b):
-        return "✅️" if a > b else "🟥"
+    def check(cond): return "✅" if cond else "❌"
 
-    return f"[{timeframe}] EMA 📈: {arrow(ema_20, ema_50)}20 {('>' if ema_20 > ema_50 else '<')} " \
-           f"{arrow(ema_50, ema_200)}50 {('>' if ema_50 > ema_200 else '<')} " \
-           f"{arrow(ema_20, ema_200)}200"
+    return (
+        f"[{timeframe}] EMA 📊: "
+        f"{check(ema_20 > ema_50)} 20>50 "
+        f"{check(ema_50 > ema_200)} 50>200 "
+        f"{check(ema_20 > ema_200)} 20>200"
+    )
 
 def get_btc_ema_status_all_timeframes():
     timeframes = ['1D', '4H', '1H', '15m']
@@ -153,7 +155,7 @@ def get_btc_ema_status_all_timeframes():
         if df is not None:
             status_texts.append(get_ema_status_text(df, timeframe=tf))
         else:
-            status_texts.append(f"[{tf}] EMA 📈: 불러오기 실패")
+            status_texts.append(f"[{tf}] EMA 📊: ❌ 불러오기 실패")
         time.sleep(random.uniform(0.2, 0.4))
     return "\n".join(status_texts)
 
@@ -164,7 +166,6 @@ def send_ranked_volume_message(bullish_ids):
     btc_change = calculate_daily_change(btc_id)
     btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
     btc_volume = calculate_1h_volume(btc_id)
-    btc_name = btc_id.replace("-USDT-SWAP", "")
     btc_volume_str = format_volume_in_eok(btc_volume)
 
     for inst_id in bullish_ids:
@@ -187,12 +188,12 @@ def send_ranked_volume_message(bullish_ids):
         change = calculate_daily_change(inst_id)
         change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
         df_15m = get_ohlcv_okx(inst_id, bar="15m", limit=200)
-        ema_status = get_ema_status_text(df_15m, timeframe="15m") if df_15m is not None else "❌ 15m EMA 정보 없음"
+        ema_status = get_ema_status_text(df_15m, timeframe="15m") if df_15m is not None else "[15m] EMA 📊: ❌ 정보 없음"
         name = inst_id.replace("-USDT-SWAP", "")
         volume_text = format_volume_in_eok(vol)
  
         message_lines.append(
-            f"*{rank}. {name}* {change_str} | 💸 거래대금: {volume_text}\n   [{ema_status}]"
+            f"*{rank}. {name}* {change_str} | 💸 거래대금: {volume_text}\n{ema_status}"
         )
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
