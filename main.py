@@ -123,12 +123,23 @@ def calculate_daily_change(inst_id):
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
 
-def format_volume_in_eok(volume):
+def format_volume_in_krw(volume):
+    # volume은 KRW 단위 (int or float)
     try:
-        eok = int(volume // 100_000_000)
-        return f"{eok}억"
-    except:
+        if volume >= 1_0000_0000_0000:  # 1조 이상
+            cho = volume // 1_0000_0000_0000
+            eok = (volume % 1_0000_0000_0000) // 1_0000_0000
+            if eok == 0:
+                return f"{int(cho)}조"
+            return f"{int(cho)}조 {int(eok)}억"
+        elif volume >= 1_0000_0000:  # 1억 이상
+            eok = volume // 1_0000_0000
+            return f"{int(eok)}억"
+        else:
+            return f"{int(volume):,}원"
+    except Exception:
         return "N/A"
+
 
 def get_ema_status_text(df, timeframe="15m"):
     close = df['c'].values
@@ -179,12 +190,18 @@ def send_ranked_volume_message(bullish_ids):
     btc_ema_status_all = get_btc_ema_status_all_timeframes()
     btc_change = calculate_daily_change(btc_id)
     btc_change_str = format_change_with_emoji(btc_change)
-    btc_volume = calculate_1h_volume(btc_id)
-    btc_volume_str = format_volume_in_eok(btc_volume)
+
+    usdt_krw_rate = get_usdt_krw_rate()
+    if usdt_krw_rate is None:
+        send_telegram_message("⚠️ 환율 정보를 가져올 수 없습니다. USDT-KRW 환율 조회 실패.")
+        return
+
+    btc_volume_krw = calculate_1h_volume_krw(btc_id, usdt_krw_rate)
+    btc_volume_str = format_volume_in_krw(btc_volume_krw)
 
     for inst_id in bullish_ids:
-        vol = calculate_1h_volume(inst_id)
-        volume_data[inst_id] = vol
+        vol_krw = calculate_1h_volume_krw(inst_id, usdt_krw_rate)
+        volume_data[inst_id] = vol_krw
         time.sleep(random.uniform(0.2, 0.4))
 
     sorted_data = sorted(volume_data.items(), key=lambda x: x[1], reverse=True)
@@ -198,13 +215,13 @@ def send_ranked_volume_message(bullish_ids):
         "━━━━━━━━━━━━━━━━━━━"
     ]
 
-    for rank, (inst_id, vol) in enumerate(sorted_data[:10], start=1):
+    for rank, (inst_id, vol_krw) in enumerate(sorted_data[:10], start=1):
         change = calculate_daily_change(inst_id)
         change_str = format_change_with_emoji(change)
         df_15m = get_ohlcv_okx(inst_id, bar="15m", limit=200)
         ema_status = get_ema_status_text(df_15m, timeframe="15m") if df_15m is not None else "[15m] EMA 📊: ❌ 정보 없음"
         name = inst_id.replace("-USDT-SWAP", "")
-        volume_text = format_volume_in_eok(vol)
+        volume_text = format_volume_in_krw(vol_krw)
 
         def is_15m_ema_dead_cross(df):
             close = df['c'].values
@@ -228,6 +245,7 @@ def send_ranked_volume_message(bullish_ids):
     message_lines.append("📡 *상승채널 확인 + 비중조절 + 손절*")
 
     send_telegram_message("\n".join(message_lines))
+
 
 def main():
     logging.info("📥 전체 종목 기준 정배열 + 거래대금 분석 시작")
