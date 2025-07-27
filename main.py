@@ -135,10 +135,10 @@ def get_ema_status_text(df, timeframe="15m"):
     ema_200 = get_ema_with_retry(close, 200)
 
     if None in [ema_20, ema_50, ema_200]:
-        return f"[{timeframe}] EMA 상태: 계산불가"
+        return f"[{timeframe}] EMA 상태: ❌"
 
     def arrow(a, b):
-        return "🔼" if a > b else "🔽"
+        return "✅️" if a > b else "🟥"
 
     return f"[{timeframe}] EMA 상태: {arrow(ema_20, ema_50)}20 {('>' if ema_20 > ema_50 else '<')} " \
            f"{arrow(ema_50, ema_200)}50 {('>' if ema_50 > ema_200 else '<')} " \
