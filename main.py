@@ -144,7 +144,7 @@ def get_ema_status_text(df, timeframe="15m"):
 
     return (
         f"[{timeframe}] EMA 📊: "
-        f"{check(ema_10 > ema_20)}"  # 🔹 10-20 상태
+        f"{check(ema_10 > ema_20)}"
         f"{check(ema_20 > ema_50)}"
         f"{check(ema_50 > ema_200)}"
     )
@@ -174,6 +174,16 @@ def format_change_with_emoji(change):
         return f"🟢 (+{change:.2f}%)"
     else:
         return f"🔴 ({change:.2f}%)"
+
+def is_15m_check_condition(df):
+    close = df['c'].values
+    ema_10 = get_ema_with_retry(close, 10)
+    ema_20 = get_ema_with_retry(close, 20)
+    ema_50 = get_ema_with_retry(close, 50)
+    ema_200 = get_ema_with_retry(close, 200)
+    if None in [ema_10, ema_20, ema_50, ema_200]:
+        return False
+    return (ema_10 < ema_20) and (ema_20 > ema_50) and (ema_50 > ema_200)
 
 def send_ranked_volume_message(bullish_ids):
     volume_data = {}
@@ -208,17 +218,9 @@ def send_ranked_volume_message(bullish_ids):
         name = inst_id.replace("-USDT-SWAP", "")
         volume_text = format_volume_in_eok(vol)
 
-        def is_15m_ema_dead_cross(df):
-            close = df['c'].values
-            ema_20 = get_ema_with_retry(close, 20)
-            ema_50 = get_ema_with_retry(close, 50)
-            if None in [ema_20, ema_50]:
-                return False
-            return ema_20 < ema_50
-
         star = ""
         if change is not None and change > 0 and df_15m is not None:
-            if is_15m_ema_dead_cross(df_15m):
+            if is_15m_check_condition(df_15m):
                 star = "  🎯🎯🎯 차트확인"
 
         message_lines.append(
