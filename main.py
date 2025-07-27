@@ -207,6 +207,8 @@ def send_ranked_volume_message(bullish_ids):
         message_lines.append(
             f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n     {ema_status}"
         )
+        # 얇은 선 추가
+        message_lines.append("─────")
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
     message_lines.append("📡 *원칙매매+비중조절+손절*")
