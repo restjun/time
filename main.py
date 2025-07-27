@@ -141,8 +141,8 @@ def get_ema_status_text(df, timeframe="15m"):
 
     return (
         f"[{timeframe}] EMA 📊: "
-        f"{check(ema_20 > ema_50)} 20>50 "
-        f"{check(ema_50 > ema_200)} 50>200"
+        f"{check(ema_20 > ema_50)}"
+        f"{check(ema_50 > ema_200)}"
     )
 
 def get_btc_ema_status_all_timeframes():
@@ -170,34 +170,6 @@ def format_change_with_emoji(change):
         return f"🟢 (+{change:.2f}%)"   # 상승
     else:
         return f"🔴 ({change:.2f}%)"    # 하락
-
-def change_bar_step(change):
-    """
-    계단식 상승률 바 (최대 6칸)
-    """
-    if change is None:
-        return "N/A"
-
-    abs_change = abs(change)
-
-    if abs_change <= 1:
-        blocks = 1
-    elif abs_change <= 10:
-        blocks = 1
-    elif abs_change <= 20:
-        blocks = 2
-    elif abs_change <= 30:
-        blocks = 3
-    elif abs_change <= 40:
-        blocks = 4
-    elif abs_change <= 50:
-        blocks = 5
-    else:
-        blocks = 6
-
-    bar = "▉" * blocks + "·" * (6 - blocks)
-
-    return bar if change >= 0 else f"🔻{bar}"
 
 def send_ranked_volume_message(bullish_ids):
     volume_data = {}
@@ -227,14 +199,13 @@ def send_ranked_volume_message(bullish_ids):
     for rank, (inst_id, vol) in enumerate(sorted_data[:10], start=1):
         change = calculate_daily_change(inst_id)
         change_str = format_change_with_emoji(change)
-        bar = change_bar_step(change)
         df_15m = get_ohlcv_okx(inst_id, bar="15m", limit=200)
         ema_status = get_ema_status_text(df_15m, timeframe="15m") if df_15m is not None else "[15m] EMA 📊: ❌ 정보 없음"
         name = inst_id.replace("-USDT-SWAP", "")
         volume_text = format_volume_in_eok(vol)
 
         message_lines.append(
-            f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n    📊 {bar} {ema_status}"
+            f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n    📊 {ema_status}"
         )
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
