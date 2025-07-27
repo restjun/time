@@ -164,18 +164,12 @@ def get_btc_ema_status_all_timeframes():
 def format_change_with_emoji(change):
     if change is None:
         return "(N/A)"
-    if change >= 10:
-        return f"🚀 (+{change:.2f}%)"
-    elif change >= 5:
-        return f"📈 (+{change:.2f}%)"
+    if change >= 5:
+        return f"🚀 (+{change:.2f}%)"   # 큰 상승
     elif change > 0:
-        return f"🟢 (+{change:.2f}%)"
-    elif change <= -10:
-        return f"🔥 ({change:.2f}%)"
-    elif change <= -5:
-        return f"🔻 ({change:.2f}%)"
+        return f"🟢 (+{change:.2f}%)"   # 상승
     else:
-        return f"🔸 ({change:.2f}%)"
+        return f"🔴 ({change:.2f}%)"    # 하락
 
 def change_bar_step(change):
     """
