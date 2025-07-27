@@ -17,8 +17,6 @@ bot = telepot.Bot(telegram_bot_token)
 
 logging.basicConfig(level=logging.INFO)
 
-
-
 def send_telegram_message(message):
     for retry_count in range(1, 11):
         try:
@@ -151,24 +149,68 @@ def get_btc_ema_status_all_timeframes():
     ordered_timeframes = ['1D', '4H', '1H', '15m']
     status_texts = []
     btc_id = "BTC-USDT-SWAP"
-    
+
     for tf in ordered_timeframes:
         df = get_ohlcv_okx(btc_id, bar=tf, limit=200)
         if df is not None:
             status = get_ema_status_text(df, timeframe=tf)
         else:
             status = f"[{tf}] EMA 📊: ❌ 불러오기 실패"
-        status_texts.append(f"    {status}")  # 들여쓰기 4칸
+        status_texts.append(f"    {status}")
         time.sleep(random.uniform(0.2, 0.4))
-    
+
     return "\n".join(status_texts)
+
+def format_change_with_emoji(change):
+    if change is None:
+        return "(N/A)"
+    if change >= 10:
+        return f"🚀 (+{change:.2f}%)"
+    elif change >= 5:
+        return f"📈 (+{change:.2f}%)"
+    elif change > 0:
+        return f"🟢 (+{change:.2f}%)"
+    elif change <= -10:
+        return f"🔥 ({change:.2f}%)"
+    elif change <= -5:
+        return f"🔻 ({change:.2f}%)"
+    else:
+        return f"🔸 ({change:.2f}%)"
+
+def change_bar_step(change):
+    """
+    계단식 상승률 바 (최대 6칸)
+    """
+    if change is None:
+        return "N/A"
+
+    abs_change = abs(change)
+
+    if abs_change <= 1:
+        blocks = 1
+    elif abs_change <= 10:
+        blocks = 1
+    elif abs_change <= 20:
+        blocks = 2
+    elif abs_change <= 30:
+        blocks = 3
+    elif abs_change <= 40:
+        blocks = 4
+    elif abs_change <= 50:
+        blocks = 5
+    else:
+        blocks = 6
+
+    bar = "▉" * blocks + "·" * (6 - blocks)
+
+    return bar if change >= 0 else f"🔻{bar}"
 
 def send_ranked_volume_message(bullish_ids):
     volume_data = {}
     btc_id = "BTC-USDT-SWAP"
     btc_ema_status_all = get_btc_ema_status_all_timeframes()
     btc_change = calculate_daily_change(btc_id)
-    btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
+    btc_change_str = format_change_with_emoji(btc_change)
     btc_volume = calculate_1h_volume(btc_id)
     btc_volume_str = format_volume_in_eok(btc_volume)
 
@@ -190,14 +232,15 @@ def send_ranked_volume_message(bullish_ids):
 
     for rank, (inst_id, vol) in enumerate(sorted_data[:10], start=1):
         change = calculate_daily_change(inst_id)
-        change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
+        change_str = format_change_with_emoji(change)
+        bar = change_bar_step(change)
         df_15m = get_ohlcv_okx(inst_id, bar="15m", limit=200)
         ema_status = get_ema_status_text(df_15m, timeframe="15m") if df_15m is not None else "[15m] EMA 📊: ❌ 정보 없음"
         name = inst_id.replace("-USDT-SWAP", "")
         volume_text = format_volume_in_eok(vol)
 
         message_lines.append(
-            f"*{rank}. {name}* {change_str} | 💸 거래대금: {volume_text}\n    {ema_status}"
+            f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n    📊 {bar} {ema_status}"
         )
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
@@ -226,4 +269,3 @@ def run_scheduler():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
