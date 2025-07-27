@@ -102,7 +102,7 @@ def filter_by_1h_and_4h_ema_alignment(inst_ids):
     return bullish_ids
 
 def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
+    df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
     if df is None or len(df) < 24:
         return 0
     df["quote_volume"] = df["c"] * df["vol"]
