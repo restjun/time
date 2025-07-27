@@ -17,7 +17,6 @@ bot = telepot.Bot(telegram_bot_token)
 
 logging.basicConfig(level=logging.INFO)
 
-
 def send_telegram_message(message):
     for retry_count in range(1, 11):
         try:
@@ -28,7 +27,6 @@ def send_telegram_message(message):
             logging.error("텔레그램 메시지 전송 실패 (재시도 %d/10): %s", retry_count, str(e))
             time.sleep(5)
     logging.error("텔레그램 메시지 전송 실패: 최대 재시도 횟수 초과")
-
 
 def retry_request(func, *args, **kwargs):
     for attempt in range(10):
@@ -44,13 +42,11 @@ def retry_request(func, *args, **kwargs):
             time.sleep(5)
     return None
 
-
 def calculate_ema(close, period):
     if len(close) < period:
         return None
     close_series = pd.Series(close)
     return close_series.ewm(span=period, adjust=False).mean().iloc[-1]
-
 
 def get_ema_with_retry(close, period):
     for _ in range(5):
@@ -59,19 +55,6 @@ def get_ema_with_retry(close, period):
             return result
         time.sleep(0.5)
     return None
-
-
-def get_okx_perpetual_symbols():
-    url = "https://www.okx.com/api/v5/public/instruments?instType=SWAP"
-    response = retry_request(requests.get, url)
-    if response is None:
-        return []
-    data = response.json()
-    return [
-        item['instId'] for item in data.get('data', [])
-        if item['instId'].endswith("-USDT-SWAP")
-    ]
-
 
 def get_okx_spot_top_volume(limit=30):
     url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT"
@@ -85,21 +68,9 @@ def get_okx_spot_top_volume(limit=30):
         inst_id = ticker['instId']
         quote_vol = float(ticker.get('volCcyQuote', 0) or 0)
         base_coin = inst_id.replace("-USDT", "")
-        volume_dict[base_coin] = quote_vol
+        volume_dict[f"{base_coin}-USDT-SWAP"] = quote_vol
 
-    # 거래대금 순서로 정렬 후 limit 개수만 반환
-    sorted_volume = dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
-    return sorted_volume
-
-
-def filter_swap_listed_coins(base_coins, swap_symbols):
-    filtered = {}
-    for base in base_coins:
-        swap_id = f"{base}-USDT-SWAP"
-        if swap_id in swap_symbols:
-            filtered[swap_id] = base_coins[base]
-    return filtered
-
+    return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
 
 def get_ohlcv_okx(instId, bar='1h', limit=200):
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
@@ -107,41 +78,26 @@ def get_ohlcv_okx(instId, bar='1h', limit=200):
     if response is None:
         return None
     try:
-        df = pd.DataFrame(response.json()['data'], columns=['ts', 'o', 'h', 'l', 'c', 'vol', 'volCcy', 'volCcyQuote', 'confirm'])
+        df = pd.DataFrame(response.json()['data'], columns=['ts','o','h','l','c','vol','volCcy','volCcyQuote','confirm'])
         df['c'] = df['c'].astype(float)
         df['o'] = df['o'].astype(float)
-        df['ts'] = pd.to_datetime(df['ts'].astype(float), unit='ms')
         return df.iloc[::-1]
     except Exception as e:
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
-
-def calculate_daily_change_kst(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=48)
-    if df is None or len(df) < 24:
+def calculate_daily_change(inst_id):
+    df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
+    if df is None or len(df) < 2:
         return None
     try:
-        df = df.set_index('ts')
-        df.index = df.index.tz_localize('UTC').tz_convert('Asia/Seoul')
-
-        today_9am = pd.Timestamp.now(tz='Asia/Seoul').replace(hour=9, minute=0, second=0, microsecond=0)
-        if today_9am not in df.index:
-            nearest_time = df.index[df.index.get_indexer([today_9am], method='nearest')[0]]
-        else:
-            nearest_time = today_9am
-
-        open_price = df.loc[nearest_time]['o']
-        if isinstance(open_price, pd.Series):
-            open_price = open_price.iloc[0]
-
-        latest_close = df['c'].iloc[-1]
-        change = ((latest_close - open_price) / open_price) * 100
+        open_price = df.iloc[-1]['o']
+        close_price = df.iloc[-1]['c']
+        change = ((close_price - open_price) / open_price) * 100
         return round(change, 2)
     except Exception as e:
-        logging.error(f"{inst_id} 상승률 계산 오류 (KST 09시 기준): {e}")
+        logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
-
 
 def get_ema_status(inst_id):
     tf_results = []
@@ -206,60 +162,62 @@ def get_ema_status(inst_id):
 
     return tf_results
 
-
-def format_volume_to_million(volume):
-    """핫크립토 스타일: 소수점 없이 정수만 m 단위로 변환하여 $291m 형식으로 표시"""
-    return f"${int(volume / 1_000_000)}m"
-
-
-def send_filtered_top_volume_message(spot_volume_dict, swap_symbols):
-    filtered_dict = filter_swap_listed_coins(spot_volume_dict, swap_symbols)
-    if not filtered_dict:
-        send_telegram_message("🔴 선물 상장된 현물 거래량 상위 코인 없음.")
+def send_filtered_top_volume_message(spot_volume_dict):
+    if not spot_volume_dict:
+        send_telegram_message("🔴 거래량 상위 코인 없음.")
         return
 
-    # 거래대금 내림차순 정렬 (이미 정렬됐을 가능성 있으나 다시 정렬 보장)
-    filtered_sorted = dict(sorted(filtered_dict.items(), key=lambda x: x[1], reverse=True))
-
-    message_lines = ["*OKX 현물 거래대금 기준 선물 상장 코인*", "━━━━━━━━━━━━━━━━━━━"]
+    message_lines = ["*OKX 현물 거래대금 기준 분석*", "━━━━━━━━━━━━━━━━━━━"]
 
     btc_id = "BTC-USDT-SWAP"
-    if btc_id in filtered_sorted:
-        btc_volume = filtered_sorted.pop(btc_id)
-        btc_volume_formatted = format_volume_to_million(btc_volume)
-        message_lines.append(f"1. BTC : {btc_volume_formatted}")
+    btc_ema = get_ema_status(btc_id)
+    btc_change = calculate_daily_change(btc_id)
+    btc_change_str = f"({btc_change:+.2f}%)" if btc_change is not None else "(N/A)"
+    message_lines.append(f"💰 BTC: {btc_id} {btc_change_str}")
+    for tf_result in btc_ema:
+        message_lines.append(f"    └ {tf_result}")
+    message_lines.append("───────────────────")
 
-    for idx, (inst_id, vol) in enumerate(filtered_sorted.items(), start=2):
-        vol_formatted = format_volume_to_million(vol)
-        base_coin = inst_id.replace("-USDT-SWAP", "")
-        message_lines.append(f"{idx}. {base_coin} : {vol_formatted}")
+    idx = 1
+    rocket_found = False
+    for inst_id in spot_volume_dict.keys():
+        if inst_id == btc_id:
+            continue
+        tf_results = get_ema_status(inst_id)
+        change = calculate_daily_change(inst_id)
+        change_str = f"({change:+.2f}%)" if change is not None else "(N/A)"
 
-    message_lines.append("━━━━━━━━━━━━━━━━━━━")
-    message = "\n".join(message_lines)
+        if any("🚀" in line for line in tf_results):
+            rocket_found = True
+            message_lines.append(f"📊 {idx}. {inst_id} {change_str}")
+            for tf_result in tf_results:
+                message_lines.append(f"    └ {tf_result}")
+            message_lines.append("───────────────────")
+            idx += 1
+            if idx > 10:
+                break
 
-    send_telegram_message(message)
+    if not rocket_found:
+        message_lines.append("🔴 현재 🚀 조건 만족 코인 없음.")
 
+    message_lines.append("🧭 *매매 원칙*")
+    message_lines.append("✅ 추격금지 / ✅ 비중조절 / ✅ 반익절 \n  4h: ✅✅️  \n  1h: ✅✅️   \n15m:✅️✅️  \n───────────────────")
+    final_message = "\n".join(message_lines)
+    send_telegram_message(final_message)
 
-def job():
-    logging.info("작업 시작")
-    spot_volume = get_okx_spot_top_volume(limit=30)
-    swap_symbols = get_okx_perpetual_symbols()
-    send_filtered_top_volume_message(spot_volume, swap_symbols)
-    logging.info("작업 완료")
+def main():
+    spot_volume = get_okx_spot_top_volume()
+    send_filtered_top_volume_message(spot_volume)
 
+@app.on_event("startup")
+def start_scheduler():
+    schedule.every(3).minutes.do(main)
+    threading.Thread(target=run_scheduler, daemon=True).start()
 
 def run_scheduler():
-    schedule.every(60).minutes.do(job)
     while True:
         schedule.run_pending()
         time.sleep(1)
 
-
-@app.get("/")
-def read_root():
-    return {"message": "OKX 거래대금 필터링 및 텔레그램 알림 API입니다."}
-
-
 if __name__ == "__main__":
-    threading.Thread(target=run_scheduler, daemon=True).start()
     uvicorn.run(app, host="0.0.0.0", port=8000)
