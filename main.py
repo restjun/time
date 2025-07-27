@@ -56,19 +56,18 @@ def get_ema_with_retry(close, period):
         time.sleep(0.5)
     return None
 
-def get_okx_spot_top_volume(limit=30):
-    url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT"
+def get_okx_swap_top_volume(limit=30):
+    url = "https://www.okx.com/api/v5/market/tickers?instType=SWAP"
     response = retry_request(requests.get, url)
     if response is None:
         return {}
 
-    tickers = response.json().get('data', [])
+    tickers = response.json().get("data", [])
     volume_dict = {}
     for ticker in tickers:
-        inst_id = ticker['instId']
-        quote_vol = float(ticker.get('volCcyQuote', 0) or 0)
-        base_coin = inst_id.replace("-USDT", "")
-        volume_dict[f"{base_coin}-USDT-SWAP"] = quote_vol
+        inst_id = ticker["instId"]
+        quote_vol = float(ticker.get("volCcyQuote", 0) or 0)
+        volume_dict[inst_id] = quote_vol
 
     return dict(sorted(volume_dict.items(), key=lambda x: x[1], reverse=True)[:limit])
 
@@ -162,12 +161,12 @@ def get_ema_status(inst_id):
 
     return tf_results
 
-def send_filtered_top_volume_message(spot_volume_dict):
-    if not spot_volume_dict:
-        send_telegram_message("🔴 거래량 상위 코인 없음.")
+def send_top_swap_volume_message(swap_volume_dict):
+    if not swap_volume_dict:
+        send_telegram_message("🔴 거래량 상위 선물 코인 없음.")
         return
 
-    message_lines = ["*OKX 현물 거래대금 기준 분석*", "━━━━━━━━━━━━━━━━━━━"]
+    message_lines = ["*OKX 선물 거래대금 기준 분석*", "━━━━━━━━━━━━━━━━━━━"]
 
     btc_id = "BTC-USDT-SWAP"
     btc_ema = get_ema_status(btc_id)
@@ -180,7 +179,7 @@ def send_filtered_top_volume_message(spot_volume_dict):
 
     idx = 1
     rocket_found = False
-    for inst_id in spot_volume_dict.keys():
+    for inst_id in swap_volume_dict.keys():
         if inst_id == btc_id:
             continue
         tf_results = get_ema_status(inst_id)
@@ -206,8 +205,8 @@ def send_filtered_top_volume_message(spot_volume_dict):
     send_telegram_message(final_message)
 
 def main():
-    spot_volume = get_okx_spot_top_volume()
-    send_filtered_top_volume_message(spot_volume)
+    swap_volume = get_okx_swap_top_volume()
+    send_top_swap_volume_message(swap_volume)
 
 @app.on_event("startup")
 def start_scheduler():
