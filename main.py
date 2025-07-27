@@ -71,10 +71,13 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
     if response is None:
         return None
     try:
-        df = pd.DataFrame(response.json()['data'], columns=['ts','o','h','l','c','vol','volCcy','volCcyQuote','confirm'])
+        df = pd.DataFrame(response.json()['data'], columns=[
+            'ts', 'o', 'h', 'l', 'c', 'vol', 'volCcy', 'volCcyQuote', 'confirm'
+        ])
         df['c'] = df['c'].astype(float)
         df['o'] = df['o'].astype(float)
         df['vol'] = df['vol'].astype(float)
+        df['volCcyQuote'] = df['volCcyQuote'].astype(float)
         return df.iloc[::-1]
     except Exception as e:
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
@@ -105,8 +108,7 @@ def calculate_1h_volume(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
     if df is None or len(df) < 24:
         return 0
-    df["quote_volume"] = df["c"] * df["vol"]
-    return df["quote_volume"].sum()
+    return df["volCcyQuote"].sum()  # ✅ 정확한 quote 거래대금 합산
 
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1D", limit=2)
@@ -165,11 +167,11 @@ def format_change_with_emoji(change):
     if change is None:
         return "(N/A)"
     if change >= 5:
-        return f"🚀 (+{change:.2f}%)"   # 큰 상승
+        return f"🚀 (+{change:.2f}%)"
     elif change > 0:
-        return f"🟢 (+{change:.2f}%)"   # 상승
+        return f"🟢 (+{change:.2f}%)"
     else:
-        return f"🔴 ({change:.2f}%)"    # 하락
+        return f"🔴 ({change:.2f}%)"
 
 def send_ranked_volume_message(bullish_ids):
     volume_data = {}
@@ -188,7 +190,7 @@ def send_ranked_volume_message(bullish_ids):
     sorted_data = sorted(volume_data.items(), key=lambda x: x[1], reverse=True)
 
     message_lines = [
-        "📊 *OKX 정배열 매물대 분석*", 
+        "📊 *OKX 정배열 매물대 분석*",
         "📅 *1H + 4H EMA 정배열 & 거래대금 TOP 10*",
         "━━━━━━━━━━━━━━━━━━━",
         f"💰 *BTC* {btc_change_str} / 거래대금: {btc_volume_str}",
@@ -204,7 +206,6 @@ def send_ranked_volume_message(bullish_ids):
         name = inst_id.replace("-USDT-SWAP", "")
         volume_text = format_volume_in_eok(vol)
 
-        # 15분봉 EMA 20-50 데드크로스 체크 함수
         def is_15m_ema_dead_cross(df):
             close = df['c'].values
             ema_20 = get_ema_with_retry(close, 20)
@@ -221,7 +222,6 @@ def send_ranked_volume_message(bullish_ids):
         message_lines.append(
             f"*{rank}. {name}* {change_str} | 💸 {volume_text}\n   {ema_status}{star}"
         )
-        # 얇은 선 추가
         message_lines.append("─────")
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
