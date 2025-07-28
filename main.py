@@ -229,7 +229,7 @@ def send_ranked_volume_message(bullish_ids):
         message_lines.append("─────")
 
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
-    message_lines.append("📡 *상승채널 확인 + 비중조절 + 손절*")
+    message_lines.append("📡 *거래대금 1시간*")
 
     send_telegram_message("\n".join(message_lines))
 
