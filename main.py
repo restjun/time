@@ -115,7 +115,7 @@ def filter_by_4h_and_1h_ema_alignment(inst_ids):
         time.sleep(random.uniform(0.2, 0.4))
     return bullish_ids
 
-def get_top_bearish_by_volume(inst_ids):
+def get_ranked_bearish_by_volume(inst_ids, top_n=3):
     volume_map = {}
     for inst_id in inst_ids:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=300)
@@ -128,9 +128,8 @@ def get_top_bearish_by_volume(inst_ids):
                 vol_24h = df_24h['volCcyQuote'].sum()
                 volume_map[inst_id] = vol_24h
         time.sleep(random.uniform(0.2, 0.4))
-    if not volume_map:
-        return None
-    return max(volume_map.items(), key=lambda x: x[1])[0]
+    sorted_items = sorted(volume_map.items(), key=lambda x: x[1], reverse=True)
+    return sorted_items[:top_n]
 
 def calculate_1h_volume(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
@@ -259,10 +258,12 @@ def send_ranked_volume_message(bullish_ids, all_ids):
     ]
 
     message_lines = [
-        "🎯 *[정배열] + [거래대금 24시간 Top1]*",
+        "📈 *코인지수 비트코인*",
         "━━━━━━━━━━━━━━━━━━━",
         f"💰 *BTC* {btc_change_str} / 거래대금: ({btc_volume_str})",
         f"{btc_ema_status}",
+        "━━━━━━━━━━━━━━━━━━━",
+        "🎯 *[정배열] + [거래대금 24시간 Top1]*",
         "━━━━━━━━━━━━━━━━━━━"
     ]
 
@@ -286,23 +287,26 @@ def send_ranked_volume_message(bullish_ids, all_ids):
             logging.error(f"{inst_id} 메시지 생성 오류: {e}")
             continue
 
-    top_bearish_id = get_top_bearish_by_volume(all_ids)
-    if top_bearish_id:
-        try:
-            vol_1h = calculate_1h_volume(top_bearish_id)
-            change = calculate_daily_change(top_bearish_id)
-            ema_status = get_all_timeframe_ema_status(top_bearish_id)
-            name = top_bearish_id.replace("-USDT-SWAP", "")
-            vol_1h_text = format_volume_in_eok(vol_1h)
-            change_str = format_change_with_emoji(change)
+    top_bearish_items = get_ranked_bearish_by_volume(all_ids, top_n=3)
+    if top_bearish_items:
+        message_lines.append("📉 *[역배열] + [거래대금 24시간 Top3]*")
+        message_lines.append("━━━━━━━━━━━━━━━━━━━")
 
-            message_lines.append("📉 *[역배열] + [거래대금 24시간 Top1]*")
-            message_lines.append("━━━━━━━━━━━━━━━━━━━")
-            message_lines.append(
-                f"*{name}* {change_str} | (🅾️)금지 💵 ( {vol_1h_text} )\n{ema_status}"
-            )
-        except Exception as e:
-            logging.error(f"{top_bearish_id} 역배열 메시지 생성 오류: {e}")
+        for idx, (inst_id, _) in enumerate(top_bearish_items, start=1):
+            try:
+                vol_1h = calculate_1h_volume(inst_id)
+                change = calculate_daily_change(inst_id)
+                ema_status = get_all_timeframe_ema_status(inst_id)
+                name = inst_id.replace("-USDT-SWAP", "")
+                vol_1h_text = format_volume_in_eok(vol_1h)
+                change_str = format_change_with_emoji(change)
+
+                message_lines.append(
+                    f"*{idx}. {name}* {change_str} | (❌)주의 💵 ( {vol_1h_text} )\n{ema_status}"
+                )
+                message_lines.append("──────────────────")
+            except Exception as e:
+                logging.error(f"{inst_id} 역배열 메시지 생성 오류: {e}")
 
     if rank == 1:
         message_lines.append("⚠️ 조건을 만족하는 종목이 없습니다.")
