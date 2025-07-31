@@ -83,14 +83,25 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
-def is_ema_bullish_5_20_50(df):
+def is_ema_bullish_5_20_50_200(df):
     close = df['c'].values
     ema_5 = get_ema_with_retry(close, 5)
     ema_20 = get_ema_with_retry(close, 20)
     ema_50 = get_ema_with_retry(close, 50)
-    if None in [ema_5, ema_20, ema_50]:
+    ema_200 = get_ema_with_retry(close, 200)
+    if None in [ema_5, ema_20, ema_50, ema_200]:
         return False
-    return ema_5 > ema_20 > ema_50
+    return ema_5 > ema_20 > ema_50 > ema_200 and ema_50 > ema_200
+
+def is_ema_bearish_5_20_50_200(df):
+    close = df['c'].values
+    ema_5 = get_ema_with_retry(close, 5)
+    ema_20 = get_ema_with_retry(close, 20)
+    ema_50 = get_ema_with_retry(close, 50)
+    ema_200 = get_ema_with_retry(close, 200)
+    if None in [ema_5, ema_20, ema_50, ema_200]:
+        return False
+    return ema_5 < ema_20 < ema_50 < ema_200 and ema_50 < ema_200
 
 def filter_by_4h_and_1h_ema_alignment(inst_ids):
     bullish_ids = []
@@ -99,13 +110,30 @@ def filter_by_4h_and_1h_ema_alignment(inst_ids):
         df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=300)
         if df_4h is None or df_1h is None:
             continue
-        if is_ema_bullish_5_20_50(df_4h) and is_ema_bullish_5_20_50(df_1h):
+        if is_ema_bullish_5_20_50_200(df_4h) and is_ema_bullish_5_20_50_200(df_1h):
             bullish_ids.append(inst_id)
         time.sleep(random.uniform(0.2, 0.4))
     return bullish_ids
 
+def get_top_bearish_by_volume(inst_ids):
+    volume_map = {}
+    for inst_id in inst_ids:
+        df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=300)
+        df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=300)
+        if df_4h is None or df_1h is None:
+            continue
+        if is_ema_bearish_5_20_50_200(df_4h) and is_ema_bearish_5_20_50_200(df_1h):
+            df_24h = get_ohlcv_okx(inst_id, bar="1D", limit=2)
+            if df_24h is not None:
+                vol_24h = df_24h['volCcyQuote'].sum()
+                volume_map[inst_id] = vol_24h
+        time.sleep(random.uniform(0.2, 0.4))
+    if not volume_map:
+        return None
+    return max(volume_map.items(), key=lambda x: x[1])[0]
+
 def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
+    df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
     if df is None or len(df) < 1:
         return 0
     return df["volCcyQuote"].sum()
@@ -118,7 +146,6 @@ def calculate_daily_change(inst_id):
         df['datetime'] = pd.to_datetime(df['ts'], unit='ms')
         df['datetime_kst'] = df['datetime'] + pd.Timedelta(hours=9)
         df.set_index('datetime_kst', inplace=True)
-
         daily = df.resample('1D', offset='9h').agg({
             'o': 'first',
             'h': 'max',
@@ -126,24 +153,20 @@ def calculate_daily_change(inst_id):
             'c': 'last',
             'vol': 'sum'
         }).dropna()
-
         daily = daily.sort_index(ascending=False).reset_index()
-
         if len(daily) < 2:
             return None
-
         today_close = daily.loc[0, 'c']
         yesterday_close = daily.loc[1, 'c']
         change = ((today_close - yesterday_close) / yesterday_close) * 100
         return round(change, 2)
-
     except Exception as e:
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
 
 def format_volume_in_eok(volume):
     try:
-        return f"{int(volume // 100_000)}"
+        return f"{int(volume // 100_000_000)}"
     except:
         return "N/A"
 
@@ -151,7 +174,7 @@ def format_change_with_emoji(change):
     if change is None:
         return "(N/A)"
     if change >= 5:
-        return f"🎯🎯🎯 (+{change:.2f}%)"
+        return f"🚨🚨🚨 (+{change:.2f}%)"
     elif change > 0:
         return f"🟢 (+{change:.2f}%)"
     else:
@@ -159,9 +182,8 @@ def format_change_with_emoji(change):
 
 def get_ema_status_text(df, timeframe="1H"):
     close = df['c'].values
-
-    ema_1 = get_ema_with_retry(close, 1)
-    ema_2 = get_ema_with_retry(close, 2)
+    ema_1 = get_ema_with_retry(close, 2)
+    ema_2 = get_ema_with_retry(close, 3)
     ema_5 = get_ema_with_retry(close, 5)
     ema_20 = get_ema_with_retry(close, 20)
     ema_50 = get_ema_with_retry(close, 50)
@@ -205,7 +227,7 @@ def get_all_timeframe_ema_status(inst_id):
         time.sleep(0.2)
     return "\n".join(status_lines)
 
-def send_ranked_volume_message(bullish_ids):
+def send_ranked_volume_message(bullish_ids, all_ids):
     volume_24h_data = {}
     volume_1h_data = {}
 
@@ -222,7 +244,7 @@ def send_ranked_volume_message(bullish_ids):
         volume_24h_data[inst_id] = vol_24h
         time.sleep(random.uniform(0.2, 0.4))
 
-    top_3_ids = sorted(volume_24h_data.items(), key=lambda x: x[1], reverse=True)[:3]
+    top_3_ids = sorted(volume_24h_data.items(), key=lambda x: x[1], reverse=True)[:1]
     top_3_ids = [item[0] for item in top_3_ids]
 
     for inst_id in top_3_ids:
@@ -237,9 +259,9 @@ def send_ranked_volume_message(bullish_ids):
     ]
 
     message_lines = [
-        "📅 *[정배열] + [거래대금 1시간 Top3]*",
+        "🎯 *[정배열] + [거래대금 24시간 Top1]*",
         "━━━━━━━━━━━━━━━━━━━",
-        f"💰 *BTC* {btc_change_str} / 거래대금: {btc_volume_str}",
+        f"💰 *BTC* {btc_change_str} / 거래대금: ({btc_volume_str})",
         f"{btc_ema_status}",
         "━━━━━━━━━━━━━━━━━━━"
     ]
@@ -256,19 +278,40 @@ def send_ranked_volume_message(bullish_ids):
             change_str = format_change_with_emoji(change)
 
             message_lines.append(
-                f"*{rank}. {name}* {change_str} | 💰 {vol_1h_text}\n{ema_status}"
+                f"*{rank}. {name}* {change_str} | (🅾️)금지 💵 ( {vol_1h_text} )\n{ema_status}"
             )
-            message_lines.append("─────")
+            message_lines.append("──────────────────")
             rank += 1
         except Exception as e:
             logging.error(f"{inst_id} 메시지 생성 오류: {e}")
             continue
 
+    top_bearish_id = get_top_bearish_by_volume(all_ids)
+    if top_bearish_id:
+        try:
+            vol_1h = calculate_1h_volume(top_bearish_id)
+            change = calculate_daily_change(top_bearish_id)
+            ema_status = get_all_timeframe_ema_status(top_bearish_id)
+            name = top_bearish_id.replace("-USDT-SWAP", "")
+            vol_1h_text = format_volume_in_eok(vol_1h)
+            change_str = format_change_with_emoji(change)
+
+            message_lines.append("📉 *[역배열] + [거래대금 24시간 Top1]*")
+            message_lines.append("━━━━━━━━━━━━━━━━━━━")
+            message_lines.append(
+                f"*{name}* {change_str} | (🅾️)금지 💵 ( {vol_1h_text} )\n{ema_status}"
+            )
+        except Exception as e:
+            logging.error(f"{top_bearish_id} 역배열 메시지 생성 오류: {e}")
+
     if rank == 1:
         message_lines.append("⚠️ 조건을 만족하는 종목이 없습니다.")
     else:
         message_lines.append("━━━━━━━━━━━━━━━━━━━")
-        message_lines.append("📡 *작은 파동 거래대금 1시간*")
+        message_lines.append("✅️ *1.10시간 이상 추세유지.*")
+        message_lines.append("✅️ *2.직전고점을 돌파하거나 돌파전.*")
+        message_lines.append("✅️ *3.거래대금 우선 / 패턴 / 추격금지*")
+        message_lines.append("✅️ *4.기준봉손절/ 직전고점  익절*")
 
     send_telegram_message("\n".join(message_lines))
 
@@ -279,7 +322,7 @@ def main():
     if not bullish_ids:
         send_telegram_message("🔴 4H + 1H 정배열 종목 없음.")
         return
-    send_ranked_volume_message(bullish_ids)
+    send_ranked_volume_message(bullish_ids, all_ids)
 
 def run_scheduler():
     while True:
