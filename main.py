@@ -108,13 +108,13 @@ def get_combined_ema_status(inst_id):
             return None
 
         bullish = (
-            ema_5_4h > ema_20_4h > ema_50_4h > ema_200_4h and ema_50_4h > ema_200_4h and
-            ema_5_1h > ema_20_1h > ema_50_1h > ema_200_1h and ema_50_1h > ema_200_1h
+            ema_5_4h > ema_20_4h > ema_50_4h > ema_200_4h and
+            ema_5_1h > ema_20_1h > ema_50_1h > ema_200_1h
         )
 
         bearish = (
-            ema_5_4h < ema_20_4h < ema_50_4h < ema_200_4h and ema_50_4h < ema_200_4h and
-            ema_5_1h < ema_20_1h < ema_50_1h < ema_200_1h and ema_50_1h < ema_200_1h
+            ema_5_4h < ema_20_4h < ema_50_4h < ema_200_4h and
+            ema_5_1h < ema_20_1h < ema_50_1h < ema_200_1h
         )
 
         return {"bullish": bullish, "bearish": bearish}
@@ -134,9 +134,12 @@ def get_top_bullish_and_bearish(inst_ids):
         vol_24h = df_24h['volCcyQuote'].sum()
         candidates.append((inst_id, vol_24h, status['bullish'], status['bearish']))
         time.sleep(random.uniform(0.2, 0.4))
+
     sorted_by_volume = sorted(candidates, key=lambda x: x[1], reverse=True)
-    top_bullish = next(((id, vol) for id, vol, bull, _ in sorted_by_volume if bull), None)
+    
+    top_bullish = [(id, vol) for id, vol, bull, _ in sorted_by_volume if bull][:2]
     top_bearish = next(((id, vol) for id, vol, _, bear in sorted_by_volume if bear), None)
+
     return top_bullish, top_bearish
 
 def calculate_1h_volume(inst_id):
@@ -251,20 +254,22 @@ def send_ranked_volume_message(top_bullish, top_bearish):
     ]
 
     if top_bullish:
-        inst_id, _ = top_bullish
-        name = inst_id.replace("-USDT-SWAP", "")
-        change = calculate_daily_change(inst_id)
-        change_str = format_change_with_emoji(change)
-        ema_status = get_all_timeframe_ema_status(inst_id)
-        volume_1h = calculate_1h_volume(inst_id)
-        vol_1h_text = format_volume_in_eok(volume_1h)
-
         message_lines += [
-            "🎯 *[정배열] + [거래대금 24시간 Top1]*",
-            "━━━━━━━━━━━━━━━━━━━",
-            f"*1. {name}* {change_str} | (🅾️)금지 💵 ( {vol_1h_text} )\n{ema_status}",
+            "🎯 *[정배열] + [거래대금 상위 Top2]*",
             "━━━━━━━━━━━━━━━━━━━"
         ]
+        for i, (inst_id, _) in enumerate(top_bullish, 1):
+            name = inst_id.replace("-USDT-SWAP", "")
+            change = calculate_daily_change(inst_id)
+            change_str = format_change_with_emoji(change)
+            ema_status = get_all_timeframe_ema_status(inst_id)
+            volume_1h = calculate_1h_volume(inst_id)
+            vol_1h_text = format_volume_in_eok(volume_1h)
+
+            message_lines += [
+                f"*{i}. {name}* {change_str} | (🅾️)금지 💵 ( {vol_1h_text} )\n{ema_status}",
+                "━━━━━━━━━━━━━━━━━━━"
+            ]
     else:
         message_lines.append("⚠️ 정배열 조건을 만족하는 종목이 없습니다.")
 
