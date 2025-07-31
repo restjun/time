@@ -290,7 +290,7 @@ def send_ranked_volume_message(top_bullish, top_bearish):
         "✅️ *1.10시간 이상 추세유지.*",
         "✅️ *2.직전고점을 돌파하거나 돌파전.*",
         "✅️ *3.거래대금 우선 / 패턴 / 추격금지*",
-        "✅️ *4.기준봉손절/ 직전고점  익절*"
+        "✅️ *4.기준봉손절/ 5-20-50-200*"
     ]
 
     send_telegram_message("\n".join(message_lines))
