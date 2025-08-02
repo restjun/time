@@ -229,7 +229,7 @@ def send_ranked_volume_message(top_bullish, top_bearish):
     btc_volume_str = format_volume_in_eok(btc_volume)
 
     message_lines = [
-        "📈 *코인지수 비트코인*",
+        "🎯 *코인지수 비트코인*",
         "━━━━━━━━━━━━━━━━━━━",
         f"💰 *BTC* {btc_change_str} / 거래대금: ({btc_volume_str})",
         f"{btc_ema_status}",
@@ -238,7 +238,7 @@ def send_ranked_volume_message(top_bullish, top_bearish):
 
     if top_bullish:
         message_lines += [
-            "🎯 *[정배열] + [거래대금 상위 Top1]*",
+            "📈 *[정배열] + [거래대금 24시간 Top1]*",
             "━━━━━━━━━━━━━━━━━━━"
         ]
         for i, (inst_id, _) in enumerate(top_bullish, 1):
