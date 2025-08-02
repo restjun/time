@@ -123,7 +123,7 @@ def get_top_bullish_and_bearish(inst_ids):
 
     sorted_by_volume = sorted(candidates, key=lambda x: x[1], reverse=True)
     
-    top_bullish = [(id, vol) for id, vol, bull, _ in sorted_by_volume if bull][:2]
+    top_bullish = [(id, vol) for id, vol, bull, _ in sorted_by_volume if bull][:1]
     top_bearish = next(((id, vol) for id, vol, _, bear in sorted_by_volume if bear), None)
 
     return top_bullish, top_bearish
@@ -238,7 +238,7 @@ def send_ranked_volume_message(top_bullish, top_bearish):
 
     if top_bullish:
         message_lines += [
-            "🎯 *[정배열] + [거래대금 상위 Top2]*",
+            "🎯 *[정배열] + [거래대금 상위 Top1]*",
             "━━━━━━━━━━━━━━━━━━━"
         ]
         for i, (inst_id, _) in enumerate(top_bullish, 1):
