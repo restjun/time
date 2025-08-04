@@ -208,7 +208,7 @@ def send_ranked_volume_message(top_bullish, total_count, bullish_count):
     ]
 
     if top_bullish:
-        message_lines.append("📈 *[정배열 + 거래대금 TOP]*")
+        message_lines.append("📈 *[정배열 15분 + 거래대금 TOP]*")
         for i, (inst_id, _, change) in enumerate(top_bullish, 1):
             name = inst_id.replace("-USDT-SWAP", "")
             ema_status = get_all_timeframe_ema_status(inst_id)
@@ -248,7 +248,7 @@ def main():
         bullish_list.append((inst_id, vol_24h, daily_change))
         time.sleep(0.1)
 
-    top_bullish = sorted(bullish_list, key=lambda x: x[1], reverse=True)[:10]
+    top_bullish = sorted(bullish_list, key=lambda x: x[1], reverse=True)[:1]
     send_ranked_volume_message(top_bullish, total_count, len(bullish_list))
 
 def run_scheduler():
