@@ -16,6 +16,7 @@ bot = telepot.Bot(telegram_bot_token)
 
 logging.basicConfig(level=logging.INFO)
 
+
 def send_telegram_message(message):
     for retry_count in range(1, 11):
         try:
@@ -26,6 +27,7 @@ def send_telegram_message(message):
             logging.error("텔레그램 메시지 전송 실패 (재시도 %d/10): %s", retry_count, str(e))
             time.sleep(5)
     logging.error("텔레그램 메시지 전송 실패: 최대 재시도 횟수 초과")
+
 
 def retry_request(func, *args, **kwargs):
     for attempt in range(10):
@@ -40,10 +42,12 @@ def retry_request(func, *args, **kwargs):
             time.sleep(5)
     return None
 
+
 def calculate_ema(close, period):
     if len(close) < period:
         return None
     return pd.Series(close).ewm(span=period, adjust=False).mean().iloc[-1]
+
 
 def get_ema_with_retry(close, period):
     for _ in range(5):
@@ -53,6 +57,7 @@ def get_ema_with_retry(close, period):
         time.sleep(0.5)
     return None
 
+
 def get_all_okx_swap_symbols():
     url = "https://www.okx.com/api/v5/public/instruments?instType=SWAP"
     response = retry_request(requests.get, url)
@@ -60,6 +65,7 @@ def get_all_okx_swap_symbols():
         return []
     data = response.json().get("data", [])
     return [item["instId"] for item in data if "USDT" in item["instId"]]
+
 
 def get_ohlcv_okx(instId, bar='1H', limit=200):
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
@@ -78,6 +84,7 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
     except Exception as e:
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
+
 
 def get_ema_bullish_status(inst_id):
     try:
@@ -113,6 +120,7 @@ def get_ema_bullish_status(inst_id):
         logging.error(f"{inst_id} EMA 상태 계산 실패: {e}")
         return None
 
+
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=48)
     if df is None or len(df) < 24:
@@ -133,12 +141,14 @@ def calculate_daily_change(inst_id):
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
 
+
 def format_volume_in_eok(volume):
     try:
         eok = int(volume // 1_000_000)
         return str(eok) if eok >= 0 else None
     except:
         return None
+
 
 def format_change_with_emoji(change):
     if change is None:
@@ -149,6 +159,7 @@ def format_change_with_emoji(change):
         return f"🟢 (+{change:.2f}%)"
     else:
         return f"🔴 ({change:.2f}%)"
+
 
 # ✅ 3일선 > 5일선만 체크
 def get_ema_status_text(df, timeframe="1D"):
@@ -170,7 +181,8 @@ def get_ema_status_text(df, timeframe="1D"):
     status = check(safe_compare(ema_3, ema_5))
     return f"{timeframe}: 3일선>5일선 {status}"
 
-# ✅ 일봉 + 4시간 상태 표시
+
+# ✅ 일봉 + 4시간 상태를 한 줄로 표시
 def get_all_timeframe_ema_status(inst_id):
     timeframes = {'1D': 250, '4H': 300}
     status_results = []
@@ -184,13 +196,14 @@ def get_all_timeframe_ema_status(inst_id):
         time.sleep(0.2)
     return " | ".join(status_results)
 
+
 def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
+    df = get_ohlcv_okx(inst_id, bar="1H", limit=4)
     if df is None or len(df) < 1:
         return 0
     return df["volCcyQuote"].sum()
 
-# ✅ 거래대금 제한 제거
+
 def send_ranked_volume_message(top_bullish, total_count, bullish_count):
     bearish_count = total_count - bullish_count
 
@@ -215,21 +228,29 @@ def send_ranked_volume_message(top_bullish, total_count, bullish_count):
         "━━━━━━━━━━━━━━━━━━━"
     ]
 
-    if top_bullish:
-        message_lines.append("📈 [정배열 + 거래대금 TOP]")
-        for i, (inst_id, _, change, _) in enumerate(top_bullish, 1):
+    filtered_top_bullish = []
+    for item in top_bullish:
+        inst_id = item[0]
+        volume_1h = calculate_1h_volume(inst_id)
+        if volume_1h < 1_000_000:
+            continue
+        filtered_top_bullish.append((inst_id, item[1], item[2], volume_1h))
+
+    if filtered_top_bullish:
+        message_lines.append("📈 [정배열 + 거래대금 TOP (1000만 이상)]")
+        for i, (inst_id, _, change, volume_1h) in enumerate(filtered_top_bullish, 1):
             name = inst_id.replace("-USDT-SWAP", "")
             ema_status = get_all_timeframe_ema_status(inst_id)
-            volume_1h = calculate_1h_volume(inst_id)
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
             message_lines += [
                 f"*{i}. {name}* {format_change_with_emoji(change)} / 거래대금: ({volume_str})\n{ema_status}",
                 "━━━━━━━━━━━━━━━━━━━"
             ]
     else:
-        message_lines.append("📉 정배열 종목이 없습니다.")
+        message_lines.append("📉 거래대금 1000만 이상인 정배열 종목이 없습니다.")
 
     send_telegram_message("\n".join(message_lines))
+
 
 def main():
     logging.info("📥 EMA 분석 시작")
@@ -257,15 +278,18 @@ def main():
     top_bullish = sorted(bullish_list, key=lambda x: (x[1], x[2]), reverse=True)[:10]
     send_ranked_volume_message(top_bullish, total_count, len(bullish_list))
 
+
 def run_scheduler():
     while True:
         schedule.run_pending()
         time.sleep(1)
 
+
 @app.on_event("startup")
 def start_scheduler():
     schedule.every(1).minutes.do(main)
     threading.Thread(target=run_scheduler, daemon=True).start()
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
