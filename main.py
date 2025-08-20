@@ -161,14 +161,16 @@ def format_change_with_emoji(change):
         return f"🔴 ({change:.2f}%)"
 
 
-# ✅ RSI 계산
-def calculate_rsi(series, period=14):
-    delta = pd.Series(series).diff()
+# ✅ EMA 기반 RSI 계산 (정확도 향상)
+def calculate_rsi(close, period=5):
+    close = pd.Series(close)
+    delta = close.diff()
+
     up = delta.clip(lower=0)
     down = -delta.clip(upper=0)
 
-    ma_up = up.rolling(window=period, min_periods=period).mean()
-    ma_down = down.rolling(window=period, min_periods=period).mean()
+    ma_up = up.ewm(span=period, adjust=False).mean()
+    ma_down = down.ewm(span=period, adjust=False).mean()
 
     rs = ma_up / ma_down
     rsi = 100 - (100 / (1 + rs))
@@ -185,16 +187,14 @@ def get_ema_icon(close):
     return "[🟩]" if ema_3 > ema_5 else "[🟥]"
 
 
-# ✅ 일봉 + 4시간 상태 표시
+# ✅ 일봉 + 4시간 EMA 그림 + 4H RSI(5)
 def get_all_timeframe_ema_status(inst_id):
     try:
         df_1d = get_ohlcv_okx(inst_id, bar="1D", limit=250)
         df_4h = get_ohlcv_okx(inst_id, bar="4H", limit=300)
 
-        # 일봉
         status_1d = get_ema_icon(df_1d['c'].astype(float).values) if df_1d is not None else "[❌]"
 
-        # 4시간봉
         if df_4h is not None:
             close_4h = df_4h['c'].astype(float).values
             status_4h = get_ema_icon(close_4h)
