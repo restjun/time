@@ -161,40 +161,54 @@ def format_change_with_emoji(change):
         return f"🔴 ({change:.2f}%)"
 
 
-# ✅ 3일선 > 5일선만 체크
-def get_ema_status_text(df, timeframe="1D"):
-    close = df['c'].astype(float).values
+# ✅ RSI 계산
+def calculate_rsi(series, period=14):
+    delta = pd.Series(series).diff()
+    up = delta.clip(lower=0)
+    down = -delta.clip(upper=0)
 
+    ma_up = up.rolling(window=period, min_periods=period).mean()
+    ma_down = down.rolling(window=period, min_periods=period).mean()
+
+    rs = ma_up / ma_down
+    rsi = 100 - (100 / (1 + rs))
+    return rsi.iloc[-1] if not rsi.empty else None
+
+
+# ✅ EMA 상태 아이콘
+def get_ema_icon(close):
     ema_3 = get_ema_with_retry(close, 3)
     ema_5 = get_ema_with_retry(close, 5)
 
-    def check(cond):
-        if cond is None:
-            return "[❌]"
-        return "[🟩]" if cond else "[🟥]"
-
-    def safe_compare(a, b):
-        if a is None or b is None:
-            return None
-        return a > b
-
-    status = check(safe_compare(ema_3, ema_5))
-    return f"{timeframe}: 3일선>5일선 {status}"
+    if ema_3 is None or ema_5 is None:
+        return "[❌]"
+    return "[🟩]" if ema_3 > ema_5 else "[🟥]"
 
 
-# ✅ 일봉 + 4시간 상태를 한 줄로 표시
+# ✅ 일봉 + 4시간 상태 표시
 def get_all_timeframe_ema_status(inst_id):
-    timeframes = {'1D': 250, '4H': 300}
-    status_results = []
-    for tf, limit in timeframes.items():
-        df = get_ohlcv_okx(inst_id, bar=tf, limit=limit)
-        if df is not None:
-            status = get_ema_status_text(df, timeframe=tf)
+    try:
+        df_1d = get_ohlcv_okx(inst_id, bar="1D", limit=250)
+        df_4h = get_ohlcv_okx(inst_id, bar="4H", limit=300)
+
+        # 일봉
+        status_1d = get_ema_icon(df_1d['c'].astype(float).values) if df_1d is not None else "[❌]"
+
+        # 4시간봉
+        if df_4h is not None:
+            close_4h = df_4h['c'].astype(float).values
+            status_4h = get_ema_icon(close_4h)
+            rsi_5 = calculate_rsi(close_4h, period=5)
+            rsi_text = f"RSI(5): {rsi_5:.2f}" if rsi_5 is not None else "RSI(5): N/A"
         else:
-            status = f"{tf}: ❌ 불러오기 실패"
-        status_results.append(status)
-        time.sleep(0.2)
-    return " | ".join(status_results)
+            status_4h = "[❌]"
+            rsi_text = "RSI(5): N/A"
+
+        return f"1D: {status_1d} | 4H: {status_4h} | {rsi_text}"
+
+    except Exception as e:
+        logging.error(f"{inst_id} 상태 표시 오류: {e}")
+        return "❌ 상태 계산 실패"
 
 
 def calculate_1h_volume(inst_id):
