@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI
 import telepot
 import schedule
@@ -94,9 +93,8 @@ def get_ema_bullish_status(inst_id):
 
         def get_emas(close):
             return (
-                get_ema_with_retry(close, 5),
-                get_ema_with_retry(close, 20),
-                get_ema_with_retry(close, 50)
+                get_ema_with_retry(close, 3),
+                get_ema_with_retry(close, 5)
             )
 
         ema_1h = get_emas(close_1h)
@@ -107,7 +105,7 @@ def get_ema_bullish_status(inst_id):
             return None
 
         def is_bullish(ema):
-            return ema[0] > ema[1] > ema[2]
+            return ema[0] > ema[1]
 
         return is_bullish(ema_1h) and is_bullish(ema_4h) and is_bullish(ema_1d)
 
@@ -152,16 +150,12 @@ def format_change_with_emoji(change):
     else:
         return f"🔴 ({change:.2f}%)"
 
-# ✅ 50 > 200 비교 추가한 상태 출력
-def get_ema_status_text(df, timeframe="1H"):
+# ✅ 3일선 > 5일선만 체크하도록 수정
+def get_ema_status_text(df, timeframe="1D"):
     close = df['c'].astype(float).values
 
-    ema_5 = get_ema_with_retry(close, 5)
-    ema_20 = get_ema_with_retry(close, 20)
-    ema_50 = get_ema_with_retry(close, 50)
-    ema_200 = get_ema_with_retry(close, 200)
-    ema_2 = get_ema_with_retry(close, 2)
     ema_3 = get_ema_with_retry(close, 3)
+    ema_5 = get_ema_with_retry(close, 5)
 
     def check(cond):
         if cond is None:
@@ -173,31 +167,25 @@ def get_ema_status_text(df, timeframe="1H"):
             return None
         return a > b
 
-    status_parts = [
-        check(safe_compare(ema_5, ema_20)),
-        check(safe_compare(ema_20, ema_50)),
-        check(safe_compare(ema_50, ema_200))  # 추가됨
-    ]
+    status = check(safe_compare(ema_3, ema_5))
+    return f"{timeframe}: 3일선>5일선 {status}"
 
-    short_term_status = check(safe_compare(ema_2, ema_3))
-
-    return f"[{timeframe}] 📊: {' '.join(status_parts)} / 📆 2일선>3일선: {short_term_status}"
-
+# ✅ 일봉 + 4시간 상태를 한 줄로 표시
 def get_all_timeframe_ema_status(inst_id):
-    timeframes = {'1D': 250, '4H': 300, '1H': 300, '15m': 300}
-    status_lines = []
+    timeframes = {'1D': 250, '4H': 300}
+    status_results = []
     for tf, limit in timeframes.items():
         df = get_ohlcv_okx(inst_id, bar=tf, limit=limit)
         if df is not None:
             status = get_ema_status_text(df, timeframe=tf)
         else:
-            status = f"[{tf}] 📊: ❌ 불러오기 실패"
-        status_lines.append(status)
+            status = f"{tf}: ❌ 불러오기 실패"
+        status_results.append(status)
         time.sleep(0.2)
-    return "\n".join(status_lines)
+    return " | ".join(status_results)
 
 def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
+    df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
     if df is None or len(df) < 1:
         return 0
     return df["volCcyQuote"].sum()
@@ -261,7 +249,7 @@ def main():
             continue
 
         daily_change = calculate_daily_change(inst_id)
-        if daily_change is None or daily_change <= 0:
+        if daily_change is None or daily_change <= -100:
             continue
 
         df_24h = get_ohlcv_okx(inst_id, bar="1D", limit=2)
@@ -272,7 +260,7 @@ def main():
         bullish_list.append((inst_id, vol_24h, daily_change))
         time.sleep(0.1)
 
-    top_bullish = sorted(bullish_list, key=lambda x: (x[1], x[2]), reverse=True)[:3]
+    top_bullish = sorted(bullish_list, key=lambda x: (x[1], x[2]), reverse=True)[:10]
     send_ranked_volume_message(top_bullish, total_count, len(bullish_list))
 
 def run_scheduler():
@@ -287,5 +275,3 @@ def start_scheduler():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
