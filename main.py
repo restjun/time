@@ -161,23 +161,30 @@ def format_change_with_emoji(change):
         return f"🔴 ({change:.2f}%)"
 
 
-# ✅ EMA 기반 RSI 계산 (정확도 향상)
+# ✅ 트레이딩뷰 RSI(Wilder 방식) 적용
 def calculate_rsi(close, period=5):
     close = pd.Series(close)
-    delta = close.diff()
+    delta = close.diff().dropna()
 
-    up = delta.clip(lower=0)
-    down = -delta.clip(upper=0)
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
 
-    ma_up = up.ewm(span=period, adjust=False).mean()
-    ma_down = down.ewm(span=period, adjust=False).mean()
+    # 초기 평균
+    avg_gain = gain.rolling(window=period, min_periods=period).mean().iloc[period-1]
+    avg_loss = loss.rolling(window=period, min_periods=period).mean().iloc[period-1]
 
-    rs = ma_up / ma_down
+    # Wilder 방식 EMA
+    for i in range(period, len(gain)):
+        avg_gain = (avg_gain * (period - 1) + gain.iloc[i]) / period
+        avg_loss = (avg_loss * (period - 1) + loss.iloc[i]) / period
+
+    if avg_loss == 0:
+        return 100
+    rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
-    return rsi.iloc[-1] if not rsi.empty else None
+    return rsi
 
 
-# ✅ EMA 상태 아이콘
 def get_ema_icon(close):
     ema_3 = get_ema_with_retry(close, 3)
     ema_5 = get_ema_with_retry(close, 5)
@@ -187,7 +194,6 @@ def get_ema_icon(close):
     return "[🟩]" if ema_3 > ema_5 else "[🟥]"
 
 
-# ✅ 일봉 + 4시간 EMA 그림 + 4H RSI(5)
 def get_all_timeframe_ema_status(inst_id):
     try:
         df_1d = get_ohlcv_okx(inst_id, bar="1D", limit=250)
