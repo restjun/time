@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI
 import telepot
 import schedule
@@ -151,6 +152,7 @@ def format_change_with_emoji(change):
     else:
         return f"🔴 ({change:.2f}%)"
 
+# ✅ 50 > 200 비교 추가한 상태 출력
 def get_ema_status_text(df, timeframe="1H"):
     close = df['c'].astype(float).values
 
@@ -174,7 +176,7 @@ def get_ema_status_text(df, timeframe="1H"):
     status_parts = [
         check(safe_compare(ema_5, ema_20)),
         check(safe_compare(ema_20, ema_50)),
-        check(safe_compare(ema_50, ema_200))
+        check(safe_compare(ema_50, ema_200))  # 추가됨
     ]
 
     short_term_status = check(safe_compare(ema_2, ema_3))
@@ -224,9 +226,17 @@ def send_ranked_volume_message(top_bullish, total_count, bullish_count):
         "━━━━━━━━━━━━━━━━━━━"
     ]
 
-    if top_bullish:
-        message_lines.append("📈 [정배열 + 거래대금 TOP 3]")
-        for i, (inst_id, _, change, volume_1h) in enumerate(top_bullish, 1):
+    filtered_top_bullish = []
+    for item in top_bullish:
+        inst_id = item[0]
+        volume_1h = calculate_1h_volume(inst_id)
+        if volume_1h < 1_000_000:
+            continue
+        filtered_top_bullish.append((inst_id, item[1], item[2], volume_1h))
+
+    if filtered_top_bullish:
+        message_lines.append("📈 [정배열 + 거래대금 TOP (1000만 이상)]")
+        for i, (inst_id, _, change, volume_1h) in enumerate(filtered_top_bullish, 1):
             name = inst_id.replace("-USDT-SWAP", "")
             ema_status = get_all_timeframe_ema_status(inst_id)
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
@@ -239,31 +249,19 @@ def send_ranked_volume_message(top_bullish, total_count, bullish_count):
 
     send_telegram_message("\n".join(message_lines))
 
-# ✅ main 함수 수정됨
 def main():
     logging.info("📥 EMA 분석 시작")
     all_ids = get_all_okx_swap_symbols()
-
-    volume_data = []
-    for inst_id in all_ids:
-        volume = calculate_1h_volume(inst_id)
-        volume_data.append((inst_id, volume))
-        time.sleep(0.05)
-
-    # 거래대금 상위 10개 추출
-    top_10_volume = sorted(volume_data, key=lambda x: x[1], reverse=True)[:10]
-
+    total_count = len(all_ids)
     bullish_list = []
-    for inst_id, volume in top_10_volume:
-        if volume < 1_000_000:
-            continue
 
+    for inst_id in all_ids:
         is_bullish = get_ema_bullish_status(inst_id)
         if not is_bullish:
             continue
 
         daily_change = calculate_daily_change(inst_id)
-        if daily_change is None or daily_change <= -100:
+        if daily_change is None or daily_change <= 0:
             continue
 
         df_24h = get_ohlcv_okx(inst_id, bar="1D", limit=2)
@@ -274,9 +272,8 @@ def main():
         bullish_list.append((inst_id, vol_24h, daily_change))
         time.sleep(0.1)
 
-    # 정배열 종목 중 거래대금 상위 3개 추출
-    top_bullish = sorted(bullish_list, key=lambda x: x[1], reverse=True)[:3]
-    send_ranked_volume_message(top_bullish, len(all_ids), len(bullish_list))
+    top_bullish = sorted(bullish_list, key=lambda x: (x[1], x[2]), reverse=True)[:3]
+    send_ranked_volume_message(top_bullish, total_count, len(bullish_list))
 
 def run_scheduler():
     while True:
@@ -290,3 +287,5 @@ def start_scheduler():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
