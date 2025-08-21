@@ -137,7 +137,7 @@ def get_ema_status_line(inst_id):
         return "[1D/4H] ❌", None
 
 
-# === USDT Dominance 캔들 생성 ===
+# === USDT Dominance 캔들 생성 & EMA 상태 ===
 def get_usdt_dominance_candles(interval='1H', limit=1):
     candles = []
     try:
@@ -163,14 +163,28 @@ def get_usdt_dominance_candles(interval='1H', limit=1):
         return None
 
 
-# === EMA 상태 + USDT Dominance 포함 ===
-def get_ema_status_with_usdt(inst_id):
-    ema_status_line, signal_type = get_ema_status_line(inst_id)
-    df_dom = get_usdt_dominance_candles(interval='1H', limit=1)
-    if df_dom is not None and not df_dom.empty:
-        latest_dom = df_dom.iloc[-1]['close']
-        ema_status_line += f" | USDT Dominance: {latest_dom:.2f}%"
-    return ema_status_line, signal_type
+def get_usdt_dominance_status_line():
+    """
+    USDT 도미넌스를 EMA 상태 메시지와 동일한 1D/4H 2-3 EMA 형태로 반환
+    """
+    try:
+        df_1d = get_usdt_dominance_candles(interval='1D', limit=30)
+        df_4h = get_usdt_dominance_candles(interval='4H', limit=50)
+
+        ema2_1d = pd.Series(df_1d['close']).ewm(span=2, adjust=False).mean().iloc[-1]
+        ema3_1d = pd.Series(df_1d['close']).ewm(span=3, adjust=False).mean().iloc[-1]
+        status_1d = "🟩" if ema2_1d > ema3_1d else "🟥"
+
+        ema2_4h = pd.Series(df_4h['close']).ewm(span=2, adjust=False).mean().iloc[-1]
+        ema3_4h = pd.Series(df_4h['close']).ewm(span=3, adjust=False).mean().iloc[-1]
+        status_4h = "🟩" if ema2_4h > ema3_4h else "🟥"
+
+        latest_dom = df_1d['close'].iloc[-1]
+
+        return f"[USDT-D] [1D] 📊: {status_1d} | [4H] 📊: {status_4h} | Current: {latest_dom:.2f}%"
+    except Exception as e:
+        logging.error(f"USDT 도미넌스 EMA 상태 계산 실패: {e}")
+        return "[USDT-D] ❌"
 
 
 def calculate_daily_change(inst_id):
@@ -218,7 +232,7 @@ def format_change_with_emoji(change):
 
 
 def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
+    df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
     if df is None or len(df) < 1:
         return 0
     return df["volCcyQuote"].sum()
@@ -230,12 +244,17 @@ def send_top_volume_message(top_ids, volume_map):
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
+# ★ USDT 도미넌스 EMA 상태 메시지 추가
+    usdt_status = get_usdt_dominance_status_line()
+    message_lines.append(usdt_status)
+    message_lines.append("━━━━━━━━━━━━━━━━━━━")
+
     signal_found = False
 
     for i, inst_id in enumerate(top_ids, 1):
         name = inst_id.replace("-USDT-SWAP", "")
-        # ★ 기존 get_ema_status_line 대신 get_ema_status_with_usdt 사용
-        ema_status_line, signal_type = get_ema_status_with_usdt(inst_id)
+        # 기존 코인 EMA 상태
+        ema_status_line, signal_type = get_ema_status_line(inst_id)
 
         if signal_type is None:
             continue
@@ -257,7 +276,7 @@ def send_top_volume_message(top_ids, volume_map):
         btc_change = calculate_daily_change(btc_id)
         btc_volume = volume_map.get(btc_id, 0)
         btc_volume_str = format_volume_in_eok(btc_volume) or "🚫"
-        btc_status_line, _ = get_ema_status_with_usdt(btc_id)
+        btc_status_line, _ = get_ema_status_line(btc_id)
 
         btc_lines = [
             "📌 BTC 현황",
