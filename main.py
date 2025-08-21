@@ -82,6 +82,7 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
 
 def get_ema_status_line(inst_id):
     try:
+        # 1D EMA 3-5 계산
         df_1d = get_ohlcv_okx(inst_id, bar='1D', limit=300)
         if df_1d is None:
             daily_status = "[1D] ❌"
@@ -89,21 +90,22 @@ def get_ema_status_line(inst_id):
             daily_ok_short = False
         else:
             closes_1d = df_1d['c'].values
-            ema_2_1d = get_ema_with_retry(closes_1d, 2)
             ema_3_1d = get_ema_with_retry(closes_1d, 3)
-            if None in [ema_2_1d, ema_3_1d]:
+            ema_5_1d = get_ema_with_retry(closes_1d, 5)
+            if None in [ema_3_1d, ema_5_1d]:
                 daily_status = "[1D] ❌"
                 daily_ok_long = daily_ok_short = False
             else:
-                if ema_2_1d > ema_3_1d:
-                    daily_status = "[1D] 📊: 🟩"
+                if ema_3_1d > ema_5_1d:
+                    daily_status = "[1D] 3-5 🟩"
                     daily_ok_long = True
                     daily_ok_short = False
                 else:
-                    daily_status = "[1D] 📊: 🟥"
+                    daily_status = "[1D] 3-5 🟥"
                     daily_ok_long = False
                     daily_ok_short = True
 
+        # 4H EMA 기존 유지
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
         if df_4h is None or len(df_4h) < 2:
             fourh_status = "[4H] ❌"
@@ -188,13 +190,12 @@ def calculate_1h_volume(inst_id):
 def send_top_volume_message(top_ids, volume_map):
     global sent_coins
     message_lines = [
-        "⚡  2-3 조건 기반 롱·숏 감지",
+        "⚡  3-5 조건 기반 롱·숏 감지",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
     current_signal_coins = []
 
-    # 조건 만족 코인만 current_signal_coins에 기록
     for inst_id in top_ids:
         ema_status_line, signal_type = get_ema_status_line(inst_id)
         if signal_type is None:
@@ -204,9 +205,7 @@ def send_top_volume_message(top_ids, volume_map):
             continue
         current_signal_coins.append(inst_id)
 
-    # 이전과 다르면 메시지 전송
     if current_signal_coins and set(current_signal_coins) != sent_coins:
-        # BTC 현황
         btc_id = "BTC-USDT-SWAP"
         btc_change = calculate_daily_change(btc_id)
         btc_volume = volume_map.get(btc_id, 0)
@@ -221,14 +220,12 @@ def send_top_volume_message(top_ids, volume_map):
         ]
         message_lines += btc_lines
 
-        # 조건 만족 코인 상세 메시지
         for inst_id in current_signal_coins:
             name = inst_id.replace("-USDT-SWAP", "")
             ema_status_line, _ = get_ema_status_line(inst_id)
             daily_change = calculate_daily_change(inst_id)
             volume_1h = volume_map.get(inst_id, 0)
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
-            # top_ids에서 실제 순위를 가져와 표시
             rank = top_ids.index(inst_id) + 1
             message_lines.append(f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str})")
             message_lines.append(ema_status_line)
@@ -258,7 +255,6 @@ def main():
         vol_1h = calculate_1h_volume(inst_id)
         volume_map[inst_id] = vol_1h
         time.sleep(0.05)
-    # 거래대금 순 Top 20
     top_ids = [inst_id for inst_id, _ in sorted(volume_map.items(), key=lambda x: x[1], reverse=True)[:20]]
     send_top_volume_message(top_ids, volume_map)
 
