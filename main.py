@@ -137,53 +137,32 @@ def get_ema_status_line(inst_id):
         return "[1D/4H] ❌", None
 
 
-# === USDT Dominance 캔들 생성 & EMA 상태 ===
-def get_usdt_dominance_candles(interval='1H', limit=1):
-    candles = []
-    try:
-        for _ in range(limit):
-            resp = requests.get("https://api.coingecko.com/api/v3/global").json()
-            dominance = resp["data"]["market_cap_percentage"]["usdt"]
-            timestamp = pd.Timestamp.utcnow()
-            candle = {
-                "time": timestamp,
-                "open": dominance,
-                "high": dominance,
-                "low": dominance,
-                "close": dominance,
-                "volume": 0
-            }
-            candles.append(candle)
-            time.sleep(0.2)
-        df = pd.DataFrame(candles)
-        df.sort_values("time", inplace=True)
-        return df
-    except Exception as e:
-        logging.error(f"USDT 도미넌스 조회 실패: {e}")
-        return None
-
-
+# === USDT Dominance 계산 (Coinlore + Coingecko) ===
 def get_usdt_dominance_status_line():
     """
-    USDT 도미넌스를 EMA 상태 메시지와 동일한 1D/4H 2-3 EMA 형태로 반환
+    USDT 도미넌스를 직접 계산하여 반환
     """
     try:
-        df_1d = get_usdt_dominance_candles(interval='1D', limit=30)
-        df_4h = get_usdt_dominance_candles(interval='4H', limit=50)
+        # USDT 시가총액
+        resp_usdt = requests.get("https://api.coinlore.net/api/ticker/?id=5644")  # USDT ID
+        usdt_cap = float(resp_usdt.json()[0].get("market_cap_usd", 0))
 
-        ema2_1d = pd.Series(df_1d['close']).ewm(span=2, adjust=False).mean().iloc[-1]
-        ema3_1d = pd.Series(df_1d['close']).ewm(span=3, adjust=False).mean().iloc[-1]
-        status_1d = "🟩" if ema2_1d > ema3_1d else "🟥"
+        # 전체 시가총액
+        resp_total = requests.get("https://api.coingecko.com/api/v3/global").json()
+        total_cap = resp_total.get("data", {}).get("total_market_cap", {}).get("usd", None)
 
-        ema2_4h = pd.Series(df_4h['close']).ewm(span=2, adjust=False).mean().iloc[-1]
-        ema3_4h = pd.Series(df_4h['close']).ewm(span=3, adjust=False).mean().iloc[-1]
-        status_4h = "🟩" if ema2_4h > ema3_4h else "🟥"
+        if not usdt_cap or not total_cap:
+            return "[USDT-D] ❌"
 
-        latest_dom = df_1d['close'].iloc[-1]
+        # 도미넌스 계산
+        usdt_dominance = usdt_cap / total_cap * 100
 
-        return f"[USDT-D] [1D] 📊: {status_1d} | [4H] 📊: {status_4h} | Current: {latest_dom:.2f}%"
+        # 상태 아이콘 (EMA 대신 단순 기준, 필요 시 수정 가능)
+        status = "🟩" if usdt_dominance > 10 else "🟥"
+
+        return f"[USDT-D] [Current] {usdt_dominance:.2f}% | Status: {status}"
     except Exception as e:
-        logging.error(f"USDT 도미넌스 EMA 상태 계산 실패: {e}")
+        logging.error(f"USDT 도미넌스 계산 실패: {e}")
         return "[USDT-D] ❌"
 
 
@@ -244,7 +223,7 @@ def send_top_volume_message(top_ids, volume_map):
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
-# ★ USDT 도미넌스 EMA 상태 메시지 추가
+    # USDT 도미넌스 상태 메시지 추가
     usdt_status = get_usdt_dominance_status_line()
     message_lines.append(usdt_status)
     message_lines.append("━━━━━━━━━━━━━━━━━━━")
