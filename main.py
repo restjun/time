@@ -185,58 +185,45 @@ def calculate_1h_volume(inst_id):
     return df["volCcyQuote"].sum()
 
 
-# ✅ 수정된 send_top_volume_message
-def send_top_volume_message(top_ids, volume_map):
+# ✅ 수정된 메시지 전송 함수
+def send_top_volume_message(candidate_coins, volume_map):
+    if not candidate_coins:
+        logging.info("⚡ 신규 조건 만족 코인 없음 → 메시지 전송 안 함")
+        return
+
     message_lines = [
         "⚡  3-5 추세매매",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
-    # 조건 만족 코인 필터링
-    candidate_coins = []
-    for inst_id in top_ids:
-        ema_status_line, signal_type = get_ema_status_line(inst_id)
-        if signal_type is None:
-            continue
+    # BTC 현황
+    btc_id = "BTC-USDT-SWAP"
+    btc_change = calculate_daily_change(btc_id)
+    btc_volume = volume_map.get(btc_id, calculate_1h_volume(btc_id))
+    btc_volume_str = format_volume_in_eok(btc_volume) or "🚫"
+    btc_status_line, _ = get_ema_status_line(btc_id)
+
+    btc_lines = [
+        "📌 BTC 현황",
+        f"BTC {format_change_with_emoji(btc_change)} / 거래대금: ({btc_volume_str})",
+        btc_status_line,
+        "━━━━━━━━━━━━━━━━━━━"
+    ]
+    message_lines += btc_lines
+
+    # 조건 만족 코인 출력
+    for rank, inst_id in enumerate(candidate_coins, 1):
+        name = inst_id.replace("-USDT-SWAP", "")
+        ema_status_line, _ = get_ema_status_line(inst_id)
         daily_change = calculate_daily_change(inst_id)
-        if daily_change is None or daily_change <= -100:
-            continue
-        candidate_coins.append(inst_id)
+        volume_1h = volume_map.get(inst_id, 0)
+        volume_str = format_volume_in_eok(volume_1h) or "🚫"
+        message_lines.append(f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str})")
+        message_lines.append(ema_status_line)
+        message_lines.append("━━━━━━━━━━━━━━━━━━━")
 
-    # 거래대금 순 정렬
-    candidate_coins = sorted(candidate_coins, key=lambda x: volume_map.get(x, 0), reverse=True)
-
-    if candidate_coins:
-        # BTC 정보 먼저
-        btc_id = "BTC-USDT-SWAP"
-        btc_change = calculate_daily_change(btc_id)
-        btc_volume = volume_map.get(btc_id, 0)
-        btc_volume_str = format_volume_in_eok(btc_volume) or "🚫"
-        btc_status_line, _ = get_ema_status_line(btc_id)
-
-        btc_lines = [
-            "📌 BTC 현황",
-            f"BTC {format_change_with_emoji(btc_change)} / 거래대금: ({btc_volume_str})",
-            btc_status_line,
-            "━━━━━━━━━━━━━━━━━━━"
-        ]
-        message_lines += btc_lines
-
-        # 조건 만족 코인 출력
-        for rank, inst_id in enumerate(candidate_coins, 1):
-            name = inst_id.replace("-USDT-SWAP", "")
-            ema_status_line, _ = get_ema_status_line(inst_id)
-            daily_change = calculate_daily_change(inst_id)
-            volume_1h = volume_map.get(inst_id, 0)
-            volume_str = format_volume_in_eok(volume_1h) or "🚫"
-            message_lines.append(f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str})")
-            message_lines.append(ema_status_line)
-            message_lines.append("━━━━━━━━━━━━━━━━━━━")
-
-        full_message = "\n".join(message_lines)
-        send_telegram_message(full_message)
-    else:
-        logging.info("⚡ 신규 조건 만족 코인 없음 → 메시지 전송 안 함")
+    full_message = "\n".join(message_lines)
+    send_telegram_message(full_message)
 
 
 def get_all_okx_swap_symbols():
@@ -248,16 +235,33 @@ def get_all_okx_swap_symbols():
     return [item["instId"] for item in data if "USDT" in item["instId"]]
 
 
+# ✅ 수정된 main()
 def main():
-    logging.info("📥 거래대금 분석 시작")
+    logging.info("📥 조건 코인 스캔 시작")
     all_ids = get_all_okx_swap_symbols()
-    volume_map = {}
+    candidate_coins = []
+
+    # 1. EMA 조건 확인 (롱/숏 신호)
     for inst_id in all_ids:
+        ema_status_line, signal_type = get_ema_status_line(inst_id)
+        if signal_type is None:
+            continue
+        daily_change = calculate_daily_change(inst_id)
+        if daily_change is None or daily_change <= -100:
+            continue
+        candidate_coins.append(inst_id)
+        time.sleep(0.05)
+
+    # 2. 조건 만족 코인의 거래대금 계산
+    volume_map = {}
+    for inst_id in candidate_coins:
         vol_1h = calculate_1h_volume(inst_id)
         volume_map[inst_id] = vol_1h
         time.sleep(0.05)
-    top_ids = [inst_id for inst_id, _ in sorted(volume_map.items(), key=lambda x: x[1], reverse=True)[:10]]
-    send_top_volume_message(top_ids, volume_map)
+
+    # 3. 거래대금 순으로 정렬 후 메시지 전송
+    candidate_coins = sorted(candidate_coins, key=lambda x: volume_map.get(x, 0), reverse=True)
+    send_top_volume_message(candidate_coins, volume_map)
 
 
 def run_scheduler():
