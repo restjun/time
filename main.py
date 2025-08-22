@@ -102,9 +102,9 @@ def get_ema_status_line(inst_id):
                     daily_ok_long = False
                     daily_ok_short = True
 
-        # 1H EMA 3-5로 변경
+        # 1H EMA 3-5 계산
         df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=50)
-        if df_1h is None or len(df_1h) < 5:  # 최소 5개 필요
+        if df_1h is None or len(df_1h) < 5:
             oneh_status = "[1H] ❌"
             golden_cross = False
             dead_cross = False
@@ -116,7 +116,7 @@ def get_ema_status_line(inst_id):
             dead_cross = ema_3_series.iloc[-2] >= ema_5_series.iloc[-2] and ema_3_series.iloc[-1] < ema_5_series.iloc[-1]
             oneh_status = f"[1H] 📊: {'🟩' if ema_3_series.iloc[-1] > ema_5_series.iloc[-1] else '🟥'}"
 
-        # 롱/숏 신호 판단 (1H 기준)
+        # 롱/숏 신호
         if daily_ok_long and golden_cross:
             signal_type = "long"
             signal = " 🚀🚀🚀(롱)"
@@ -185,14 +185,15 @@ def calculate_1h_volume(inst_id):
     return df["volCcyQuote"].sum()
 
 
+# ✅ 수정된 send_top_volume_message
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
         "⚡  3-5 추세매매",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
-    current_signal_coins = []
-
+    # 조건 만족 코인 필터링
+    candidate_coins = []
     for inst_id in top_ids:
         ema_status_line, signal_type = get_ema_status_line(inst_id)
         if signal_type is None:
@@ -200,9 +201,13 @@ def send_top_volume_message(top_ids, volume_map):
         daily_change = calculate_daily_change(inst_id)
         if daily_change is None or daily_change <= -100:
             continue
-        current_signal_coins.append(inst_id)
+        candidate_coins.append(inst_id)
 
-    if current_signal_coins:
+    # 거래대금 순 정렬
+    candidate_coins = sorted(candidate_coins, key=lambda x: volume_map.get(x, 0), reverse=True)
+
+    if candidate_coins:
+        # BTC 정보 먼저
         btc_id = "BTC-USDT-SWAP"
         btc_change = calculate_daily_change(btc_id)
         btc_volume = volume_map.get(btc_id, 0)
@@ -217,13 +222,13 @@ def send_top_volume_message(top_ids, volume_map):
         ]
         message_lines += btc_lines
 
-        for inst_id in current_signal_coins:
+        # 조건 만족 코인 출력
+        for rank, inst_id in enumerate(candidate_coins, 1):
             name = inst_id.replace("-USDT-SWAP", "")
             ema_status_line, _ = get_ema_status_line(inst_id)
             daily_change = calculate_daily_change(inst_id)
             volume_1h = volume_map.get(inst_id, 0)
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
-            rank = top_ids.index(inst_id) + 1
             message_lines.append(f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str})")
             message_lines.append(ema_status_line)
             message_lines.append("━━━━━━━━━━━━━━━━━━━")
