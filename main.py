@@ -16,9 +16,6 @@ bot = telepot.Bot(telegram_bot_token)
 
 logging.basicConfig(level=logging.INFO)
 
-# 전역 변수로 마지막 조건 만족 코인 기록
-sent_coins = set()
-
 
 def send_telegram_message(message):
     for retry_count in range(1, 11):
@@ -189,7 +186,6 @@ def calculate_1h_volume(inst_id):
 
 
 def send_top_volume_message(top_ids, volume_map):
-    global sent_coins
     message_lines = [
         "⚡  3-5 추세매매",
         "━━━━━━━━━━━━━━━━━━━",
@@ -206,7 +202,7 @@ def send_top_volume_message(top_ids, volume_map):
             continue
         current_signal_coins.append(inst_id)
 
-    if current_signal_coins and set(current_signal_coins) != sent_coins:
+    if current_signal_coins:
         btc_id = "BTC-USDT-SWAP"
         btc_change = calculate_daily_change(btc_id)
         btc_volume = volume_map.get(btc_id, 0)
@@ -234,7 +230,6 @@ def send_top_volume_message(top_ids, volume_map):
 
         full_message = "\n".join(message_lines)
         send_telegram_message(full_message)
-        sent_coins = set(current_signal_coins)
     else:
         logging.info("⚡ 신규 조건 만족 코인 없음 → 메시지 전송 안 함")
 
