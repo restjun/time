@@ -105,19 +105,19 @@ def get_ema_status_line(inst_id):
                     daily_ok_long = False
                     daily_ok_short = True
 
-        # 4H EMA 기존 유지
+        # 4H EMA 3-5로 수정
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
-        if df_4h is None or len(df_4h) < 2:
+        if df_4h is None or len(df_4h) < 5:  # 최소 5개 필요
             fourh_status = "[4H] ❌"
             golden_cross = False
             dead_cross = False
         else:
             closes_4h = df_4h['c'].values
-            ema_2_series = pd.Series(closes_4h).ewm(span=2, adjust=False).mean()
             ema_3_series = pd.Series(closes_4h).ewm(span=3, adjust=False).mean()
-            golden_cross = ema_2_series.iloc[-2] <= ema_3_series.iloc[-2] and ema_2_series.iloc[-1] > ema_3_series.iloc[-1]
-            dead_cross = ema_2_series.iloc[-2] >= ema_3_series.iloc[-2] and ema_2_series.iloc[-1] < ema_3_series.iloc[-1]
-            fourh_status = f"[4H] 📊: {'🟩' if ema_2_series.iloc[-1] > ema_3_series.iloc[-1] else '🟥'}"
+            ema_5_series = pd.Series(closes_4h).ewm(span=5, adjust=False).mean()
+            golden_cross = ema_3_series.iloc[-2] <= ema_5_series.iloc[-2] and ema_3_series.iloc[-1] > ema_5_series.iloc[-1]
+            dead_cross = ema_3_series.iloc[-2] >= ema_5_series.iloc[-2] and ema_3_series.iloc[-1] < ema_5_series.iloc[-1]
+            fourh_status = f"[4H] 📊: {'🟩' if ema_3_series.iloc[-1] > ema_5_series.iloc[-1] else '🟥'}"
 
         if daily_ok_long and golden_cross:
             signal_type = "long"
