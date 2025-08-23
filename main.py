@@ -176,7 +176,7 @@ return df["volCcyQuote"].sum()
 
 def send_top_volume_message(top_ids, volume_map):
 message_lines = [
-"⚡  3-5 추세매매",
+"⚡  3-5 추세매매 정배열 우선코인",
 "━━━━━━━━━━━━━━━━━━━",
 ]
 
@@ -187,7 +187,7 @@ for inst_id in top_ids:
     if signal_type is None:  
         continue  
     daily_change = calculate_daily_change(inst_id)  
-    if daily_change is None or daily_change <= -100:  
+    if daily_change is None or daily_change <= 0:  
         continue  
     current_signal_coins.append(inst_id)  
 
