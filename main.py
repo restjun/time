@@ -10,7 +10,7 @@ import pandas as pd
 
 app = FastAPI()
 
-telegram_bot_token = "YOUR_TELEGRAM_BOT_TOKEN"
+telegram_bot_token = "8451481398:AAHHg2wVDKphMruKsjN2b6NFKJ50jhxEe-g"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
 
@@ -18,13 +18,13 @@ logging.basicConfig(level=logging.INFO)
 
 
 def send_telegram_message(message):
-    for retry_count in range(10):
+    for retry_count in range(1, 11):
         try:
             bot.sendMessage(chat_id=telegram_user_id, text=message)
             logging.info("텔레그램 메시지 전송 성공")
             return
         except Exception as e:
-            logging.error(f"텔레그램 메시지 전송 실패 (재시도 {retry_count+1}/10): {e}")
+            logging.error(f"텔레그램 메시지 전송 실패 (재시도 {retry_count}/10): {e}")
             time.sleep(5)
     logging.error("텔레그램 메시지 전송 실패: 최대 재시도 초과")
 
@@ -102,7 +102,7 @@ def get_ema_status_line(inst_id):
                     daily_ok_long = False
                     daily_ok_short = True
 
-        # 4H EMA 3-5 계산
+        # 4H EMA 3-5 계산 (1H → 4H 적용)
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
         if df_4h is None or len(df_4h) < 5:
             fourh_status = "[4H] ❌"
@@ -112,23 +112,17 @@ def get_ema_status_line(inst_id):
             closes_4h = df_4h['c'].values
             ema_3_series = pd.Series(closes_4h).ewm(span=3, adjust=False).mean()
             ema_5_series = pd.Series(closes_4h).ewm(span=5, adjust=False).mean()
-            golden_cross = (
-                ema_3_series.iloc[-2] <= ema_5_series.iloc[-2] and
-                ema_3_series.iloc[-1] > ema_5_series.iloc[-1]
-            )
-            dead_cross = (
-                ema_3_series.iloc[-2] >= ema_5_series.iloc[-2] and
-                ema_3_series.iloc[-1] < ema_5_series.iloc[-1]
-            )
-            fourh_status = f"[4H] 📊 : {'🟩' if ema_3_series.iloc[-1] > ema_5_series.iloc[-1] else '🟥'}"
+            golden_cross = ema_3_series.iloc[-2] <= ema_5_series.iloc[-2] and ema_3_series.iloc[-1] > ema_5_series.iloc[-1]
+            dead_cross = ema_3_series.iloc[-2] >= ema_5_series.iloc[-2] and ema_3_series.iloc[-1] < ema_5_series.iloc[-1]
+            fourh_status = f"[4H] 3-5 {'🟩' if ema_3_series.iloc[-1] > ema_5_series.iloc[-1] else '🟥'}"
 
-        # 롱/숏 신호 판단 (4H 기준)
+        # 롱/숏 신호 판단
         if daily_ok_long and golden_cross:
             signal_type = "long"
-            signal = "🚀🚀🚀 (롱)"
+            signal = " 🚀🚀🚀(롱)"
         elif daily_ok_short and dead_cross:
             signal_type = "short"
-            signal = "⚡⚡⚡ (숏)"
+            signal = " ⚡⚡⚡(숏)"
         else:
             signal_type = None
             signal = ""
@@ -193,7 +187,7 @@ def calculate_1h_volume(inst_id):
 
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
-        "⚡ 3-5 추세매매 거래대금 순서",
+        "⚡  3-5 추세매매 거래대금 4시간기준",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
