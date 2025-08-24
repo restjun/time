@@ -93,22 +93,23 @@ def calc_mfi(df, period=14):
     return mfi
 
 
+# 🔹 MFI 1시간봉으로 수정
 def get_mfi_status_line(inst_id, period=5, mfi_threshold=70):
     try:
-        df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=100)
-        if df_4h is None or len(df_4h) < period:
-            return "[4H MFI] ❌", False
+        df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=100)
+        if df_1h is None or len(df_1h) < period:
+            return "[1H MFI] ❌", False
 
-        mfi_series = calc_mfi(df_4h, period)
+        mfi_series = calc_mfi(df_1h, period)
 
         if mfi_series.iloc[-2] < mfi_threshold <= mfi_series.iloc[-1]:
-            return f"[4H MFI] 🚨 MFI 돌파: {mfi_series.iloc[-1]:.2f}", True
+            return f"[1H MFI] 🚨 MFI 돌파: {mfi_series.iloc[-1]:.2f}", True
         else:
-            return f"[4H MFI] {mfi_series.iloc[-1]:.2f}", False
+            return f"[1H MFI] {mfi_series.iloc[-1]:.2f}", False
 
     except Exception as e:
         logging.error(f"{inst_id} MFI 계산 실패: {e}")
-        return "[4H MFI] ❌", False
+        return "[1H MFI] ❌", False
 
 
 def calculate_daily_change(inst_id):
@@ -167,7 +168,7 @@ def calculate_1h_volume(inst_id):
 
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
-        "⚡  4H MFI 5일선 70 이상 돌파 코인",
+        "⚡  1H MFI 5일선 70 이상 돌파 코인",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
@@ -175,7 +176,6 @@ def send_top_volume_message(top_ids, volume_map):
     current_signal_coins = []
 
     for inst_id in top_ids:
-        # 🔹 임계값을 70으로 수정
         mfi_status_line, signal_flag = get_mfi_status_line(inst_id, period=5, mfi_threshold=70)
         if not signal_flag:
             continue
