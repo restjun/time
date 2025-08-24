@@ -85,18 +85,25 @@ def calc_mfi_tv(df, length):
 
 def get_mfi_status_line(inst_id, period_days=5, mfi_threshold=60):
     try:
-        df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
+        df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=200)
         if df_4h is None or len(df_4h) < period_days * 6:
             return "[4H MFI] ❌", False
 
         mfi_series = calc_mfi_tv(df_4h, length=period_days*6)
 
-        # 수정: 돌파 조건 + MFI 60 이상 모두 잡음
-        signal_flag = mfi_series.iloc[-1] >= mfi_threshold
-        if mfi_series.iloc[-2] < mfi_threshold <= mfi_series.iloc[-1]:
-            status = f"[4H MFI] 🚨 MFI 돌파: {mfi_series.iloc[-1]:.2f}"
+        # ✅ 5일선 MFI (4H 기준 6캔들 * 5일 = 30개)
+        mfi_ma5 = mfi_series.rolling(period_days*6).mean()
+
+        current_mfi = mfi_series.iloc[-1]
+        current_ma5 = mfi_ma5.iloc[-1]
+
+        # 조건 체크
+        signal_flag = current_mfi >= mfi_threshold
+
+        if mfi_series.iloc[-2] < mfi_threshold <= current_mfi:
+            status = f"[4H MFI] 🚨 돌파: {current_mfi:.2f} / 5일선: {current_ma5:.2f}"
         else:
-            status = f"[4H MFI] {mfi_series.iloc[-1]:.2f}"
+            status = f"[4H MFI] {current_mfi:.2f} / 5일선: {current_ma5:.2f}"
 
         return status, signal_flag
     except Exception as e:
