@@ -173,7 +173,7 @@ def send_top_volume_message(top_ids, volume_map):
     current_signal_coins = []
 
     for inst_id in top_ids:
-        mfi_status_line, signal_flag = get_mfi_status_line(inst_id, period=5, mfi_threshold=70)
+        mfi_status_line, signal_flag = get_mfi_status_line(inst_id, period=5, mfi_threshold=60)
         if not signal_flag:
             continue
         daily_change = calculate_daily_change(inst_id)
@@ -233,7 +233,7 @@ def main():
         volume_map[inst_id] = vol_1h
         time.sleep(0.05)
 
-    top_ids = [inst_id for inst_id, _ in sorted(volume_map.items(), key=lambda x: x[1], reverse=True)[:20]]
+    top_ids = [inst_id for inst_id, _ in sorted(volume_map.items(), key=lambda x: x[1], reverse=True)[:100]]
     send_top_volume_message(top_ids, volume_map)
 
 
