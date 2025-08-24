@@ -43,21 +43,6 @@ def retry_request(func, *args, **kwargs):
     return None
 
 
-def calculate_ema(close, period):
-    if len(close) < period:
-        return None
-    return pd.Series(close).ewm(span=period, adjust=False).mean().iloc[-1]
-
-
-def get_ema_with_retry(close, period):
-    for _ in range(5):
-        result = calculate_ema(close, period)
-        if result is not None:
-            return result
-        time.sleep(0.5)
-    return None
-
-
 def get_ohlcv_okx(instId, bar='1H', limit=200):
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
     response = retry_request(requests.get, url)
@@ -77,61 +62,29 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         return None
 
 
-def get_ema_status_line(inst_id):
+def get_rsi_status_line(inst_id, period=5, rsi_threshold=70):
     try:
-        # 1D EMA 3-5 계산
-        df_1d = get_ohlcv_okx(inst_id, bar='1D', limit=300)
-        if df_1d is None:
-            daily_status = "[1D] ❌"
-            daily_ok_long = False
-            daily_ok_short = False
-        else:
-            closes_1d = df_1d['c'].values
-            ema_3_1d = get_ema_with_retry(closes_1d, 3)
-            ema_5_1d = get_ema_with_retry(closes_1d, 5)
-            if None in [ema_3_1d, ema_5_1d]:
-                daily_status = "[1D] ❌"
-                daily_ok_long = daily_ok_short = False
-            else:
-                if ema_3_1d > ema_5_1d:
-                    daily_status = "[1D] 3-5 🟩"
-                    daily_ok_long = True
-                    daily_ok_short = False
-                else:
-                    daily_status = "[1D] 3-5 🟥"
-                    daily_ok_long = False
-                    daily_ok_short = True
-
-        # 4H EMA 3-5 계산 (1H → 4H 적용)
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
-        if df_4h is None or len(df_4h) < 5:
-            fourh_status = "[4H] ❌"
-            golden_cross = False
-            dead_cross = False
-        else:
-            closes_4h = df_4h['c'].values
-            ema_3_series = pd.Series(closes_4h).ewm(span=3, adjust=False).mean()
-            ema_5_series = pd.Series(closes_4h).ewm(span=5, adjust=False).mean()
-            golden_cross = ema_3_series.iloc[-2] <= ema_5_series.iloc[-2] and ema_3_series.iloc[-1] > ema_5_series.iloc[-1]
-            dead_cross = ema_3_series.iloc[-2] >= ema_5_series.iloc[-2] and ema_3_series.iloc[-1] < ema_5_series.iloc[-1]
-            fourh_status = f"[4H] 3-5 {'🟩' if ema_3_series.iloc[-1] > ema_5_series.iloc[-1] else '🟥'}"
+        if df_4h is None or len(df_4h) < period:
+            return "[4H RSI] ❌", False
 
-        # 롱/숏 신호 판단
-        if daily_ok_long and golden_cross:
-            signal_type = "long"
-            signal = " 🚀🚀🚀(롱)"
-        elif daily_ok_short and dead_cross:
-            signal_type = "short"
-            signal = " ⚡⚡⚡(숏)"
-        else:
-            signal_type = None
-            signal = ""
+        closes = df_4h['c'].values
+        delta = pd.Series(closes).diff()
+        gain = delta.clip(lower=0)
+        loss = -delta.clip(upper=0)
+        avg_gain = gain.rolling(window=period).mean()
+        avg_loss = loss.rolling(window=period).mean()
+        rs = avg_gain / avg_loss
+        rsi_series = 100 - (100 / (1 + rs))
 
-        return f"{daily_status} | {fourh_status}{signal}", signal_type
+        if rsi_series.iloc[-2] < rsi_threshold <= rsi_series.iloc[-1]:
+            return f"[4H RSI] 🚨 RSI 돌파: {rsi_series.iloc[-1]:.2f}", True
+        else:
+            return f"[4H RSI] {rsi_series.iloc[-1]:.2f}", False
 
     except Exception as e:
-        logging.error(f"{inst_id} EMA 상태 계산 실패: {e}")
-        return "[1D/4H] ❌", None
+        logging.error(f"{inst_id} RSI 계산 실패: {e}")
+        return "[4H RSI] ❌", False
 
 
 def calculate_daily_change(inst_id):
@@ -187,45 +140,42 @@ def calculate_1h_volume(inst_id):
 
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
-        "⚡  3-5 추세매매 거래대금 4시간기준",
+        "⚡  4H RSI 5일선 70 이상 돌파 코인",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
     current_signal_coins = []
 
     for inst_id in top_ids:
-        ema_status_line, signal_type = get_ema_status_line(inst_id)
-        if signal_type is None:
-            continue
+        rsi_status_line, signal_flag = get_rsi_status_line(inst_id)
+        if not signal_flag:
+            continue  # RSI 70 돌파하지 않으면 패스
         daily_change = calculate_daily_change(inst_id)
         if daily_change is None or daily_change <= -100:
             continue
-        current_signal_coins.append(inst_id)
+        current_signal_coins.append((inst_id, rsi_status_line, daily_change))
 
     if current_signal_coins:
         btc_id = "BTC-USDT-SWAP"
         btc_change = calculate_daily_change(btc_id)
         btc_volume = volume_map.get(btc_id, 0)
         btc_volume_str = format_volume_in_eok(btc_volume) or "🚫"
-        btc_status_line, _ = get_ema_status_line(btc_id)
+        btc_rsi_line, _ = get_rsi_status_line(btc_id)
 
         btc_lines = [
             "📌 BTC 현황",
             f"BTC {format_change_with_emoji(btc_change)} / 거래대금: ({btc_volume_str})",
-            btc_status_line,
+            btc_rsi_line,
             "━━━━━━━━━━━━━━━━━━━"
         ]
         message_lines += btc_lines
 
-        for inst_id in current_signal_coins:
+        for rank, (inst_id, rsi_line, daily_change) in enumerate(current_signal_coins, start=1):
             name = inst_id.replace("-USDT-SWAP", "")
-            ema_status_line, _ = get_ema_status_line(inst_id)
-            daily_change = calculate_daily_change(inst_id)
             volume_1h = volume_map.get(inst_id, 0)
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
-            rank = top_ids.index(inst_id) + 1
             message_lines.append(f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str})")
-            message_lines.append(ema_status_line)
+            message_lines.append(rsi_line)
             message_lines.append("━━━━━━━━━━━━━━━━━━━")
 
         full_message = "\n".join(message_lines)
