@@ -64,38 +64,38 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         return None
 
 
-# ===================== MFI 계산 =====================
-def calc_mfi(df, period=5):  # 5일선 적용
+# ===================== 트레이딩뷰와 동일한 5일 MFI 계산 =====================
+def calc_mfi_tv(df, length=5):
     typical_price = (df['h'] + df['l'] + df['c']) / 3
-    money_flow = typical_price * df['vol']
-    positive_flow = []
-    negative_flow = []
+    raw_mf = typical_price * df['vol']
+    pos_mf = [0]
+    neg_mf = [0]
 
-    for i in range(1, len(typical_price)):
-        if typical_price[i] > typical_price[i - 1]:
-            positive_flow.append(money_flow[i])
-            negative_flow.append(0)
-        elif typical_price[i] < typical_price[i - 1]:
-            positive_flow.append(0)
-            negative_flow.append(money_flow[i])
+    for i in range(1, len(df)):
+        if typical_price[i] > typical_price[i-1]:
+            pos_mf.append(raw_mf[i])
+            neg_mf.append(0)
+        elif typical_price[i] < typical_price[i-1]:
+            pos_mf.append(0)
+            neg_mf.append(raw_mf[i])
         else:
-            positive_flow.append(0)
-            negative_flow.append(0)
+            pos_mf.append(0)
+            neg_mf.append(0)
 
-    positive_mf = pd.Series(positive_flow).rolling(period).sum()
-    negative_mf = pd.Series(negative_flow).rolling(period).sum()
-    mfi = 100 - (100 / (1 + positive_mf / negative_mf))
-    mfi = pd.Series([None]*(len(df)-len(mfi)-1) + list(mfi))  # 길이 맞추기
+    pos_mf_s = pd.Series(pos_mf).rolling(length).sum()
+    neg_mf_s = pd.Series(neg_mf).rolling(length).sum()
+    mfr = pos_mf_s / neg_mf_s
+    mfi = 100 - (100 / (1 + mfr))
     return mfi
 
 
-def get_mfi_status_line(inst_id, period=5, mfi_threshold=70):  # 5일선, 70 적용
+def get_mfi_status_line(inst_id, period=5, mfi_threshold=70):
     try:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
         if df_4h is None or len(df_4h) < period + 1:
             return "[4H MFI] ❌", False
 
-        mfi_series = calc_mfi(df_4h, period)
+        mfi_series = calc_mfi_tv(df_4h, period)
 
         if mfi_series.iloc[-2] < mfi_threshold <= mfi_series.iloc[-1]:
             return f"[4H MFI] 🚨 MFI 돌파: {mfi_series.iloc[-1]:.2f}", True
