@@ -89,7 +89,7 @@ def calc_mfi_tv(df, length):
     return mfi
 
 
-def get_mfi_status_line(inst_id, period_days=5, mfi_threshold=70):
+def get_mfi_status_line(inst_id, period_days=5, mfi_threshold=60):
     try:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
         if df_4h is None or len(df_4h) < period_days * 6:
@@ -172,7 +172,7 @@ def send_top_volume_message(top_ids, volume_map):
         if not signal_flag:
             continue
         daily_change = calculate_daily_change(inst_id)
-        if daily_change is None or daily_change <= -100:
+        if daily_change is None or daily_change <= 0:
             continue
         volume_1h = volume_map.get(inst_id, 0)
         actual_rank = rank_map.get(inst_id, "🚫")
