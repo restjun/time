@@ -160,9 +160,13 @@ def send_top_volume_message(top_ids, volume_map):
         daily_change = calculate_daily_change(inst_id)
         if daily_change is None or daily_change <= -100:
             continue
-        current_signal_coins.append((inst_id, rsi_status_line, daily_change))
+        volume_1h = volume_map.get(inst_id, 0)
+        current_signal_coins.append((inst_id, rsi_status_line, daily_change, volume_1h))
 
     if current_signal_coins:
+        # 거래대금 기준으로 내림차순 정렬
+        current_signal_coins.sort(key=lambda x: x[3], reverse=True)
+
         btc_id = "BTC-USDT-SWAP"
         btc_change = calculate_daily_change(btc_id)
         btc_volume = volume_map.get(btc_id, 0)
@@ -177,9 +181,8 @@ def send_top_volume_message(top_ids, volume_map):
         ]
         message_lines += btc_lines
 
-        for rank, (inst_id, rsi_line, daily_change) in enumerate(current_signal_coins, start=1):
+        for rank, (inst_id, rsi_line, daily_change, volume_1h) in enumerate(current_signal_coins, start=1):
             name = inst_id.replace("-USDT-SWAP", "")
-            volume_1h = volume_map.get(inst_id, 0)
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
             message_lines.append(f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str})")
             message_lines.append(rsi_line)
