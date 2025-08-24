@@ -65,29 +65,38 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         return None
 
 
+# 🔹 트레이딩뷰 호환 MFI 계산 함수
 def calc_mfi(df, period=14):
-    typical_price = (df['h'] + df['l'] + df['c']) / 3
-    money_flow = typical_price * df['vol']
+    # Typical Price
+    tp = (df['h'] + df['l'] + df['c']) / 3
 
-    positive_flow = []
-    negative_flow = []
+    # Raw Money Flow
+    rmf = tp * df['vol']
 
+    # Positive / Negative Money Flow
+    positive_mf = []
+    negative_mf = []
     for i in range(1, len(df)):
-        if typical_price.iloc[i] > typical_price.iloc[i - 1]:
-            positive_flow.append(money_flow.iloc[i])
-            negative_flow.append(0)
-        elif typical_price.iloc[i] < typical_price.iloc[i - 1]:
-            positive_flow.append(0)
-            negative_flow.append(money_flow.iloc[i])
+        if tp.iloc[i] > tp.iloc[i-1]:
+            positive_mf.append(rmf.iloc[i])
+            negative_mf.append(0)
+        elif tp.iloc[i] < tp.iloc[i-1]:
+            positive_mf.append(0)
+            negative_mf.append(rmf.iloc[i])
         else:
-            positive_flow.append(0)
-            negative_flow.append(0)
+            positive_mf.append(0)
+            negative_mf.append(0)
 
-    positive_mf = pd.Series(positive_flow).rolling(window=period).sum()
-    negative_mf = pd.Series(negative_flow).rolling(window=period).sum()
+    # 길이 맞추기 (맨 앞 NaN 추가)
+    positive_mf = pd.Series([None] + positive_mf, index=df.index)
+    negative_mf = pd.Series([None] + negative_mf, index=df.index)
 
-    mfi = 100 * (positive_mf / (positive_mf + negative_mf))
-    mfi = mfi.reindex(df.index, method="bfill")
+    # Rolling Sum (SMA 방식)
+    pos_mf_sum = positive_mf.rolling(window=period, min_periods=period).sum()
+    neg_mf_sum = negative_mf.rolling(window=period, min_periods=period).sum()
+
+    # MFI 계산
+    mfi = 100 * (pos_mf_sum / (pos_mf_sum + neg_mf_sum))
     return mfi
 
 
