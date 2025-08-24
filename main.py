@@ -65,7 +65,7 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
 
 
 # ===================== MFI 계산 =====================
-def calc_mfi(df, period=14):
+def calc_mfi(df, period=5):  # 5일선 적용
     typical_price = (df['h'] + df['l'] + df['c']) / 3
     money_flow = typical_price * df['vol']
     positive_flow = []
@@ -89,7 +89,7 @@ def calc_mfi(df, period=14):
     return mfi
 
 
-def get_mfi_status_line(inst_id, period=14, mfi_threshold=80):
+def get_mfi_status_line(inst_id, period=5, mfi_threshold=70):  # 5일선, 70 적용
     try:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
         if df_4h is None or len(df_4h) < period + 1:
@@ -107,7 +107,6 @@ def get_mfi_status_line(inst_id, period=14, mfi_threshold=80):
         return "[4H MFI] ❌", False
 
 
-# ===================== 기존 RSI 관련 함수 대체 =====================
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=48)
     if df is None or len(df) < 24:
@@ -161,7 +160,7 @@ def calculate_1h_volume(inst_id):
 
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
-        "⚡  4H MFI 14일선 80 이상 돌파 코인",
+        "⚡  4H MFI 5일선 70 이상 돌파 코인",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
