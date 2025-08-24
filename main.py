@@ -207,7 +207,7 @@ def send_top_volume_message(top_ids, volume_map):
             name = inst_id.replace("-USDT-SWAP", "")
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
             message_lines.append(
-                f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str}) 순위: {actual_rank}위"
+                f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str}) {actual_rank}위"
             )
             message_lines.append(mfi_line)
             message_lines.append("━━━━━━━━━━━━━━━━━━━")
