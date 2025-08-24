@@ -62,21 +62,28 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         return None
 
 
+def calc_rsi(prices, period=5):
+    """트레이딩뷰와 동일한 Wilders RSI 계산"""
+    delta = prices.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+
 def get_rsi_status_line(inst_id, period=5, rsi_threshold=70):
     try:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
         if df_4h is None or len(df_4h) < period:
             return "[4H RSI] ❌", False
 
-        closes = df_4h['c'].values
-        delta = pd.Series(closes).diff()
-        gain = delta.clip(lower=0)
-        loss = -delta.clip(upper=0)
-        avg_gain = gain.rolling(window=period).mean()
-        avg_loss = loss.rolling(window=period).mean()
-        rs = avg_gain / avg_loss
-        rsi_series = 100 - (100 / (1 + rs))
+        closes = pd.Series(df_4h['c'])
+        rsi_series = calc_rsi(closes, period)
 
+        # 직전 캔들 대비 RSI 돌파 여부 확인
         if rsi_series.iloc[-2] < rsi_threshold <= rsi_series.iloc[-1]:
             return f"[4H RSI] 🚨 RSI 돌파: {rsi_series.iloc[-1]:.2f}", True
         else:
@@ -149,7 +156,7 @@ def send_top_volume_message(top_ids, volume_map):
     for inst_id in top_ids:
         rsi_status_line, signal_flag = get_rsi_status_line(inst_id)
         if not signal_flag:
-            continue  # RSI 70 돌파하지 않으면 패스
+            continue
         daily_change = calculate_daily_change(inst_id)
         if daily_change is None or daily_change <= -100:
             continue
