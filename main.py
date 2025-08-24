@@ -16,7 +16,6 @@ bot = telepot.Bot(telegram_bot_token)
 
 logging.basicConfig(level=logging.INFO)
 
-
 def send_telegram_message(message):
     for retry_count in range(1, 11):
         try:
@@ -27,7 +26,6 @@ def send_telegram_message(message):
             logging.error(f"텔레그램 메시지 전송 실패 (재시도 {retry_count}/10): {e}")
             time.sleep(5)
     logging.error("텔레그램 메시지 전송 실패: 최대 재시도 초과")
-
 
 def retry_request(func, *args, **kwargs):
     for attempt in range(10):
@@ -41,7 +39,6 @@ def retry_request(func, *args, **kwargs):
             logging.error(f"API 호출 실패 (재시도 {attempt+1}/10): {e}")
             time.sleep(5)
     return None
-
 
 def get_ohlcv_okx(instId, bar='1H', limit=200):
     url = f"https://www.okx.com/api/v5/market/candles?instId={instId}&bar={bar}&limit={limit}"
@@ -63,8 +60,6 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         logging.error(f"{instId} OHLCV 파싱 실패: {e}")
         return None
 
-
-# ===================== 트레이딩뷰와 동일한 4H 5일 MFI 계산 =====================
 def calc_mfi_tv(df, length):
     typical_price = (df['h'] + df['l'] + df['c']) / 3
     raw_mf = typical_price * df['vol']
@@ -88,24 +83,25 @@ def calc_mfi_tv(df, length):
     mfi = 100 - (100 / (1 + mfr))
     return mfi
 
-
 def get_mfi_status_line(inst_id, period_days=5, mfi_threshold=60):
     try:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
         if df_4h is None or len(df_4h) < period_days * 6:
             return "[4H MFI] ❌", False
 
-        # 4시간봉 기준, 트레이딩뷰 5일선 = 5일 * 6봉 = 30
         mfi_series = calc_mfi_tv(df_4h, length=period_days*6)
 
+        # 수정: 돌파 조건 + MFI 60 이상 모두 잡음
+        signal_flag = mfi_series.iloc[-1] >= mfi_threshold
         if mfi_series.iloc[-2] < mfi_threshold <= mfi_series.iloc[-1]:
-            return f"[4H MFI] 🚨 MFI 돌파: {mfi_series.iloc[-1]:.2f}", True
+            status = f"[4H MFI] 🚨 MFI 돌파: {mfi_series.iloc[-1]:.2f}"
         else:
-            return f"[4H MFI] {mfi_series.iloc[-1]:.2f}", False
+            status = f"[4H MFI] {mfi_series.iloc[-1]:.2f}"
+
+        return status, signal_flag
     except Exception as e:
         logging.error(f"{inst_id} MFI 계산 실패: {e}")
         return "[4H MFI] ❌", False
-
 
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=48)
@@ -131,14 +127,12 @@ def calculate_daily_change(inst_id):
         logging.error(f"{inst_id} 상승률 계산 오류: {e}")
         return None
 
-
 def format_volume_in_eok(volume):
     try:
         eok = int(volume // 1_000_000)
         return str(eok) if eok >= 1 else None
     except:
         return None
-
 
 def format_change_with_emoji(change):
     if change is None:
@@ -150,17 +144,15 @@ def format_change_with_emoji(change):
     else:
         return f"🔴 ({change:.2f}%)"
 
-
 def calculate_1h_volume(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
     if df is None or len(df) < 1:
         return 0
     return df["volCcyQuote"].sum()
 
-
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
-        "⚡  4H MFI 5일선 70 이상 돌파 코인",
+        "⚡  4H MFI 5일선 60 이상 코인",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
@@ -209,7 +201,6 @@ def send_top_volume_message(top_ids, volume_map):
     else:
         logging.info("⚡ 신규 조건 만족 코인 없음 → 메시지 전송 안 함")
 
-
 def get_all_okx_swap_symbols():
     url = "https://www.okx.com/api/v5/public/instruments?instType=SWAP"
     response = retry_request(requests.get, url)
@@ -217,7 +208,6 @@ def get_all_okx_swap_symbols():
         return []
     data = response.json().get("data", [])
     return [item["instId"] for item in data if "USDT" in item["instId"]]
-
 
 def main():
     logging.info("📥 거래대금 분석 시작")
@@ -230,18 +220,15 @@ def main():
     top_ids = [inst_id for inst_id, _ in sorted(volume_map.items(), key=lambda x: x[1], reverse=True)[:200]]
     send_top_volume_message(top_ids, volume_map)
 
-
 def run_scheduler():
     while True:
         schedule.run_pending()
         time.sleep(1)
 
-
 @app.on_event("startup")
 def start_scheduler():
     schedule.every(1).minutes.do(main)
     threading.Thread(target=run_scheduler, daemon=True).start()
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
