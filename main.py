@@ -63,7 +63,6 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
 
 
 def calc_rsi(prices, period=5):
-    """트레이딩뷰와 동일한 Wilders RSI 계산"""
     delta = prices.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
@@ -83,7 +82,6 @@ def get_rsi_status_line(inst_id, period=5, rsi_threshold=70):
         closes = pd.Series(df_4h['c'])
         rsi_series = calc_rsi(closes, period)
 
-        # 직전 캔들 대비 RSI 돌파 여부 확인
         if rsi_series.iloc[-2] < rsi_threshold <= rsi_series.iloc[-1]:
             return f"[4H RSI] 🚨 RSI 돌파: {rsi_series.iloc[-1]:.2f}", True
         else:
@@ -151,6 +149,9 @@ def send_top_volume_message(top_ids, volume_map):
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
+    # top_ids 기반 거래대금 순위 맵
+    rank_map = {inst_id: rank+1 for rank, inst_id in enumerate(top_ids)}
+
     current_signal_coins = []
 
     for inst_id in top_ids:
@@ -161,10 +162,11 @@ def send_top_volume_message(top_ids, volume_map):
         if daily_change is None or daily_change <= -100:
             continue
         volume_1h = volume_map.get(inst_id, 0)
-        current_signal_coins.append((inst_id, rsi_status_line, daily_change, volume_1h))
+        actual_rank = rank_map.get(inst_id, "🚫")
+        current_signal_coins.append((inst_id, rsi_status_line, daily_change, volume_1h, actual_rank))
 
     if current_signal_coins:
-        # 거래대금 기준으로 내림차순 정렬
+        # 거래대금 기준으로 RSI 조건 만족 코인 정렬
         current_signal_coins.sort(key=lambda x: x[3], reverse=True)
 
         btc_id = "BTC-USDT-SWAP"
@@ -181,10 +183,12 @@ def send_top_volume_message(top_ids, volume_map):
         ]
         message_lines += btc_lines
 
-        for rank, (inst_id, rsi_line, daily_change, volume_1h) in enumerate(current_signal_coins, start=1):
+        for rank, (inst_id, rsi_line, daily_change, volume_1h, actual_rank) in enumerate(current_signal_coins, start=1):
             name = inst_id.replace("-USDT-SWAP", "")
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
-            message_lines.append(f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str})")
+            message_lines.append(
+                f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str}) 순위: {actual_rank}위"
+            )
             message_lines.append(rsi_line)
             message_lines.append("━━━━━━━━━━━━━━━━━━━")
 
