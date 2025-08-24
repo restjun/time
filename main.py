@@ -64,8 +64,8 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         return None
 
 
-# ===================== 트레이딩뷰와 동일한 5일 MFI 계산 =====================
-def calc_mfi_tv(df, length=5):
+# ===================== 트레이딩뷰와 동일한 4H 5일 MFI 계산 =====================
+def calc_mfi_tv(df, length):
     typical_price = (df['h'] + df['l'] + df['c']) / 3
     raw_mf = typical_price * df['vol']
     pos_mf = [0]
@@ -89,19 +89,19 @@ def calc_mfi_tv(df, length=5):
     return mfi
 
 
-def get_mfi_status_line(inst_id, period=5, mfi_threshold=70):
+def get_mfi_status_line(inst_id, period_days=5, mfi_threshold=70):
     try:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
-        if df_4h is None or len(df_4h) < period + 1:
+        if df_4h is None or len(df_4h) < period_days * 6:
             return "[4H MFI] ❌", False
 
-        mfi_series = calc_mfi_tv(df_4h, period)
+        # 4시간봉 기준, 트레이딩뷰 5일선 = 5일 * 6봉 = 30
+        mfi_series = calc_mfi_tv(df_4h, length=period_days*6)
 
         if mfi_series.iloc[-2] < mfi_threshold <= mfi_series.iloc[-1]:
             return f"[4H MFI] 🚨 MFI 돌파: {mfi_series.iloc[-1]:.2f}", True
         else:
             return f"[4H MFI] {mfi_series.iloc[-1]:.2f}", False
-
     except Exception as e:
         logging.error(f"{inst_id} MFI 계산 실패: {e}")
         return "[4H MFI] ❌", False
