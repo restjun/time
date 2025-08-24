@@ -10,7 +10,7 @@ import pandas as pd
 
 app = FastAPI()
 
-telegram_bot_token = "8451481398:AAHHg2wVDKphMruKsjN2b6NFKJ50jhxEe-g"
+telegram_bot_token = "YOUR_TELEGRAM_BOT_TOKEN"
 telegram_user_id = 6596886700
 bot = telepot.Bot(telegram_bot_token)
 
@@ -83,27 +83,27 @@ def calc_mfi_tv(df, length):
     mfi = 100 - (100 / (1 + mfr))
     return mfi
 
-def get_mfi_status_line(inst_id, period_days=5, mfi_threshold=60):
+# ✅ 수정된 함수: 4시간봉 5일선 MFI, 기준치 70
+def get_mfi_status_line(inst_id, period_days=5, mfi_threshold=70):
     try:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=200)
         if df_4h is None or len(df_4h) < period_days * 6:
             return "[4H MFI] ❌", False
 
-        mfi_series = calc_mfi_tv(df_4h, length=period_days*6)
+        # 5일선 기준 → 6캔들 * 5일 = 30개
+        mfi_series = calc_mfi_tv(df_4h, length=period_days * 6)
 
-        # ✅ 5일선 MFI (4H 기준 6캔들 * 5일 = 30개)
-        mfi_ma5 = mfi_series.rolling(period_days*6).mean()
+        mfi_ma = mfi_series.rolling(period_days * 6).mean()
 
         current_mfi = mfi_series.iloc[-1]
-        current_ma5 = mfi_ma5.iloc[-1]
+        current_ma = mfi_ma.iloc[-1]
 
-        # 조건 체크
         signal_flag = current_mfi >= mfi_threshold
 
         if mfi_series.iloc[-2] < mfi_threshold <= current_mfi:
-            status = f"[4H MFI] 🚨 돌파: {current_mfi:.2f} / 5일선: {current_ma5:.2f}"
+            status = f"[4H MFI-5일선] 🚨 돌파: {current_mfi:.2f} / 5일선: {current_ma:.2f}"
         else:
-            status = f"[4H MFI] {current_mfi:.2f} / 5일선: {current_ma5:.2f}"
+            status = f"[4H MFI-5일선] {current_mfi:.2f} / 5일선: {current_ma:.2f}"
 
         return status, signal_flag
     except Exception as e:
@@ -159,7 +159,7 @@ def calculate_1h_volume(inst_id):
 
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
-        "⚡  4H MFI 5일선 60 이상 코인",
+        "⚡  4H MFI 5일선 70 이상 코인",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
