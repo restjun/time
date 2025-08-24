@@ -54,6 +54,8 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         ])
         df['c'] = df['c'].astype(float)
         df['o'] = df['o'].astype(float)
+        df['h'] = df['h'].astype(float)
+        df['l'] = df['l'].astype(float)
         df['vol'] = df['vol'].astype(float)
         df['volCcyQuote'] = df['volCcyQuote'].astype(float)
         return df.iloc[::-1]
@@ -62,36 +64,50 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
         return None
 
 
-def calc_rsi(prices, period=5):
-    delta = prices.diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
-    avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
-    rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
+# ===================== MFI 계산 =====================
+def calc_mfi(df, period=14):
+    typical_price = (df['h'] + df['l'] + df['c']) / 3
+    money_flow = typical_price * df['vol']
+    positive_flow = []
+    negative_flow = []
+
+    for i in range(1, len(typical_price)):
+        if typical_price[i] > typical_price[i - 1]:
+            positive_flow.append(money_flow[i])
+            negative_flow.append(0)
+        elif typical_price[i] < typical_price[i - 1]:
+            positive_flow.append(0)
+            negative_flow.append(money_flow[i])
+        else:
+            positive_flow.append(0)
+            negative_flow.append(0)
+
+    positive_mf = pd.Series(positive_flow).rolling(period).sum()
+    negative_mf = pd.Series(negative_flow).rolling(period).sum()
+    mfi = 100 - (100 / (1 + positive_mf / negative_mf))
+    mfi = pd.Series([None]*(len(df)-len(mfi)-1) + list(mfi))  # 길이 맞추기
+    return mfi
 
 
-def get_rsi_status_line(inst_id, period=5, rsi_threshold=70):
+def get_mfi_status_line(inst_id, period=14, mfi_threshold=80):
     try:
         df_4h = get_ohlcv_okx(inst_id, bar='4H', limit=50)
-        if df_4h is None or len(df_4h) < period:
-            return "[4H RSI] ❌", False
+        if df_4h is None or len(df_4h) < period + 1:
+            return "[4H MFI] ❌", False
 
-        closes = pd.Series(df_4h['c'])
-        rsi_series = calc_rsi(closes, period)
+        mfi_series = calc_mfi(df_4h, period)
 
-        if rsi_series.iloc[-2] < rsi_threshold <= rsi_series.iloc[-1]:
-            return f"[4H RSI] 🚨 RSI 돌파: {rsi_series.iloc[-1]:.2f}", True
+        if mfi_series.iloc[-2] < mfi_threshold <= mfi_series.iloc[-1]:
+            return f"[4H MFI] 🚨 MFI 돌파: {mfi_series.iloc[-1]:.2f}", True
         else:
-            return f"[4H RSI] {rsi_series.iloc[-1]:.2f}", False
+            return f"[4H MFI] {mfi_series.iloc[-1]:.2f}", False
 
     except Exception as e:
-        logging.error(f"{inst_id} RSI 계산 실패: {e}")
-        return "[4H RSI] ❌", False
+        logging.error(f"{inst_id} MFI 계산 실패: {e}")
+        return "[4H MFI] ❌", False
 
 
+# ===================== 기존 RSI 관련 함수 대체 =====================
 def calculate_daily_change(inst_id):
     df = get_ohlcv_okx(inst_id, bar="1H", limit=48)
     if df is None or len(df) < 24:
@@ -145,17 +161,15 @@ def calculate_1h_volume(inst_id):
 
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
-        "⚡  4H RSI 5일선 70 이상 돌파 코인",
+        "⚡  4H MFI 14일선 80 이상 돌파 코인",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
-    # top_ids 기반 거래대금 순위 맵
     rank_map = {inst_id: rank+1 for rank, inst_id in enumerate(top_ids)}
-
     current_signal_coins = []
 
     for inst_id in top_ids:
-        rsi_status_line, signal_flag = get_rsi_status_line(inst_id)
+        mfi_status_line, signal_flag = get_mfi_status_line(inst_id)
         if not signal_flag:
             continue
         daily_change = calculate_daily_change(inst_id)
@@ -163,33 +177,32 @@ def send_top_volume_message(top_ids, volume_map):
             continue
         volume_1h = volume_map.get(inst_id, 0)
         actual_rank = rank_map.get(inst_id, "🚫")
-        current_signal_coins.append((inst_id, rsi_status_line, daily_change, volume_1h, actual_rank))
+        current_signal_coins.append((inst_id, mfi_status_line, daily_change, volume_1h, actual_rank))
 
     if current_signal_coins:
-        # 거래대금 기준으로 RSI 조건 만족 코인 정렬
         current_signal_coins.sort(key=lambda x: x[3], reverse=True)
 
         btc_id = "BTC-USDT-SWAP"
         btc_change = calculate_daily_change(btc_id)
         btc_volume = volume_map.get(btc_id, 0)
         btc_volume_str = format_volume_in_eok(btc_volume) or "🚫"
-        btc_rsi_line, _ = get_rsi_status_line(btc_id)
+        btc_mfi_line, _ = get_mfi_status_line(btc_id)
 
         btc_lines = [
             "📌 BTC 현황",
             f"BTC {format_change_with_emoji(btc_change)} / 거래대금: ({btc_volume_str})",
-            btc_rsi_line,
+            btc_mfi_line,
             "━━━━━━━━━━━━━━━━━━━"
         ]
         message_lines += btc_lines
 
-        for rank, (inst_id, rsi_line, daily_change, volume_1h, actual_rank) in enumerate(current_signal_coins, start=1):
+        for rank, (inst_id, mfi_line, daily_change, volume_1h, actual_rank) in enumerate(current_signal_coins, start=1):
             name = inst_id.replace("-USDT-SWAP", "")
             volume_str = format_volume_in_eok(volume_1h) or "🚫"
             message_lines.append(
                 f"{rank}. {name} {format_change_with_emoji(daily_change)} / 거래대금: ({volume_str}) 순위: {actual_rank}위"
             )
-            message_lines.append(rsi_line)
+            message_lines.append(mfi_line)
             message_lines.append("━━━━━━━━━━━━━━━━━━━")
 
         full_message = "\n".join(message_lines)
