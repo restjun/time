@@ -67,13 +67,9 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
 
 # 🔹 트레이딩뷰 호환 MFI 계산 함수
 def calc_mfi(df, period=14):
-    # Typical Price
     tp = (df['h'] + df['l'] + df['c']) / 3
-
-    # Raw Money Flow
     rmf = tp * df['vol']
 
-    # Positive / Negative Money Flow
     positive_mf = []
     negative_mf = []
     for i in range(1, len(df)):
@@ -87,15 +83,12 @@ def calc_mfi(df, period=14):
             positive_mf.append(0)
             negative_mf.append(0)
 
-    # 길이 맞추기 (맨 앞 NaN 추가)
     positive_mf = pd.Series([None] + positive_mf, index=df.index)
     negative_mf = pd.Series([None] + negative_mf, index=df.index)
 
-    # Rolling Sum (SMA 방식)
     pos_mf_sum = positive_mf.rolling(window=period, min_periods=period).sum()
     neg_mf_sum = negative_mf.rolling(window=period, min_periods=period).sum()
 
-    # MFI 계산
     mfi = 100 * (pos_mf_sum / (pos_mf_sum + neg_mf_sum))
     return mfi
 
@@ -182,7 +175,8 @@ def send_top_volume_message(top_ids, volume_map):
     current_signal_coins = []
 
     for inst_id in top_ids:
-        mfi_status_line, signal_flag = get_mfi_status_line(inst_id, period=5, mfi_threshold=60)
+        # 🔹 임계값을 70으로 수정
+        mfi_status_line, signal_flag = get_mfi_status_line(inst_id, period=5, mfi_threshold=70)
         if not signal_flag:
             continue
         daily_change = calculate_daily_change(inst_id)
