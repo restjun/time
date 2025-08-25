@@ -66,7 +66,7 @@ def get_ohlcv_okx(instId, bar='1H', limit=200):
 
 
 # 🔹 트레이딩뷰 호환 MFI 계산 함수
-def calc_mfi(df, period=14):
+def calc_mfi(df, period=14):  # ✅ 기본값 14로 변경
     tp = (df['h'] + df['l'] + df['c']) / 3
     rmf = tp * df['vol']
 
@@ -93,8 +93,8 @@ def calc_mfi(df, period=14):
     return mfi
 
 
-# 🔹 MFI 1시간봉으로 수정
-def get_mfi_status_line(inst_id, period=5, mfi_threshold=70):
+# 🔹 MFI 1시간봉 → 14일선으로 수정
+def get_mfi_status_line(inst_id, period=14, mfi_threshold=70):  # ✅ 기본값 14
     try:
         df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=100)
         if df_1h is None or len(df_1h) < period:
@@ -160,7 +160,7 @@ def format_change_with_emoji(change):
 
 
 def calculate_1h_volume(inst_id):
-    df = get_ohlcv_okx(inst_id, bar="1H", limit=1)
+    df = get_ohlcv_okx(inst_id, bar="1H", limit=24)
     if df is None or len(df) < 1:
         return 0
     return df["volCcyQuote"].sum()
@@ -168,7 +168,7 @@ def calculate_1h_volume(inst_id):
 
 def send_top_volume_message(top_ids, volume_map):
     message_lines = [
-        "⚡  1H MFI 5일선 70 이상 돌파 코인",
+        "⚡  1H MFI 14일선 70 이상 돌파 코인",  # ✅ 문구도 14일선으로 변경
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
@@ -176,11 +176,11 @@ def send_top_volume_message(top_ids, volume_map):
     current_signal_coins = []
 
     for inst_id in top_ids:
-        mfi_status_line, signal_flag = get_mfi_status_line(inst_id, period=5, mfi_threshold=70)
+        mfi_status_line, signal_flag = get_mfi_status_line(inst_id, period=14, mfi_threshold=70)  # ✅ period=14
         if not signal_flag:
             continue
         daily_change = calculate_daily_change(inst_id)
-        if daily_change is None or daily_change <= -100:
+        if daily_change is None or daily_change <= 0:
             continue
         volume_1h = volume_map.get(inst_id, 0)
         actual_rank = rank_map.get(inst_id, "🚫")
@@ -193,7 +193,7 @@ def send_top_volume_message(top_ids, volume_map):
         btc_change = calculate_daily_change(btc_id)
         btc_volume = volume_map.get(btc_id, 0)
         btc_volume_str = format_volume_in_eok(btc_volume) or "🚫"
-        btc_mfi_line, _ = get_mfi_status_line(btc_id, period=5, mfi_threshold=70)
+        btc_mfi_line, _ = get_mfi_status_line(btc_id, period=14, mfi_threshold=70)  # ✅ period=14
 
         btc_lines = [
             "📌 BTC 현황",
