@@ -111,16 +111,28 @@ def calc_rsi(df, period=5):
     return rsi
 
 
-# 🔹 MFI 상태 라인 (✅ 일봉 기준으로 수정)
-def get_mfi_status_line(inst_id, period=5, mfi_threshold=70, return_raw=False):
-    df_1d = get_ohlcv_okx(inst_id, bar='1D', limit=100)
+# 🔹 일봉 MFI/RSI 조건 체크 함수 (추가)
+def check_daily_mfi_rsi(inst_id, period=5, threshold=70):
+    df_1d = get_ohlcv_okx(inst_id, bar="1D", limit=100)
     if df_1d is None or len(df_1d) < period:
-        return ("[1D MFI] ❌", False) if not return_raw else ("[1D MFI] ❌", False, None, None)
+        return False
+    mfi_val = calc_mfi(df_1d, period).iloc[-1]
+    rsi_val = calc_rsi(df_1d, period).iloc[-1]
+    if pd.isna(mfi_val) or pd.isna(rsi_val):
+        return False
+    return mfi_val >= threshold and rsi_val >= threshold
+
+
+# 🔹 MFI 상태 라인
+def get_mfi_status_line(inst_id, period=5, mfi_threshold=70, return_raw=False):
+    df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=100)
+    if df_1h is None or len(df_1h) < period:
+        return ("[1H MFI] ❌", False) if not return_raw else ("[1H MFI] ❌", False, None, None)
     
-    mfi_series = calc_mfi(df_1d, period)
+    mfi_series = calc_mfi(df_1h, period)
     last, prev = mfi_series.iloc[-1], mfi_series.iloc[-2]
 
-    line = f"[1D MFI] {last:.2f}" if pd.notna(last) else "[1D MFI] ❌"
+    line = f"[1H MFI] {last:.2f}" if pd.notna(last) else "[1H MFI] ❌"
     signal = prev < mfi_threshold <= last if pd.notna(last) and pd.notna(prev) else False
 
     if return_raw:
@@ -128,16 +140,16 @@ def get_mfi_status_line(inst_id, period=5, mfi_threshold=70, return_raw=False):
     return line, signal
 
 
-# 🔹 RSI 상태 라인 (✅ 일봉 기준으로 수정)
+# 🔹 RSI 상태 라인
 def get_rsi_status_line(inst_id, period=5, threshold=70, return_raw=False):
-    df_1d = get_ohlcv_okx(inst_id, bar='1D', limit=100)
-    if df_1d is None or len(df_1d) < period:
-        return ("[1D RSI] ❌", False) if not return_raw else ("[1D RSI] ❌", False, None, None)
+    df_1h = get_ohlcv_okx(inst_id, bar='1H', limit=100)
+    if df_1h is None or len(df_1h) < period:
+        return ("[1H RSI] ❌", False) if not return_raw else ("[1H RSI] ❌", False, None, None)
     
-    rsi_series = calc_rsi(df_1d, period)
+    rsi_series = calc_rsi(df_1h, period)
     last, prev = rsi_series.iloc[-1], rsi_series.iloc[-2]
 
-    line = f"[1D RSI] {last:.2f}" if pd.notna(last) else "[1D RSI] ❌"
+    line = f"[1H RSI] {last:.2f}" if pd.notna(last) else "[1H RSI] ❌"
     signal = prev < threshold <= last if pd.notna(last) and pd.notna(prev) else False
 
     if return_raw:
@@ -245,7 +257,7 @@ def get_all_okx_swap_symbols():
 def send_top_volume_message(top_ids, volume_map):
     global sent_signal_coins
     message_lines = [
-        "⚡  1D MFI/RSI(5) 70 돌파 코인",
+        "⚡  1H MFI/RSI(5) 70 돌파 + 일봉 5일선 MFI/RSI≥70 필터",
         "━━━━━━━━━━━━━━━━━━━",
     ]
 
@@ -256,9 +268,15 @@ def send_top_volume_message(top_ids, volume_map):
         signal_status_line, signal_flag = get_signal_status_line(inst_id, mfi_period=5, rsi_period=5, threshold=70)
         if not signal_flag:
             continue
+
+        # 🔹 추가된 조건: 일봉 5일선 MFI & RSI ≥ 70
+        if not check_daily_mfi_rsi(inst_id, period=5, threshold=70):
+            continue
+
         daily_change = calculate_daily_change(inst_id)
         if daily_change is None or daily_change <= -100:
             continue
+
         volume_1h = volume_map.get(inst_id, 0)
         actual_rank = rank_map.get(inst_id, "🚫")
         current_signal_coins.append((inst_id, signal_status_line, daily_change, volume_1h, actual_rank))
